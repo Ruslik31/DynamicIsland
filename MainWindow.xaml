@@ -412,6 +412,9 @@
                     <Canvas x:Name="LyricBox" Height="34" Margin="36,0,41,0"
                             Background="Transparent" ClipToBounds="True" IsHitTestVisible="False"
                             SizeChanged="LyricBox_SizeChanged">
+                        <Canvas.RenderTransform>
+                            <TranslateTransform x:Name="LyricSnap"/>
+                        </Canvas.RenderTransform>
                         <Canvas.OpacityMask>
                             <LinearGradientBrush x:Name="LyricMask" MappingMode="Absolute" StartPoint="0,0" EndPoint="133,0">
                                 <GradientStop Color="#00000000" Offset="0"/>
@@ -780,7 +783,7 @@
                     </Button>
                 </Grid>
 
-                <Grid x:Name="MenuView" Width="300" Height="328" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="MenuView" Width="300" Height="368" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,14,10,0">
                         <TextBlock Style="{StaticResource Caption}" Text="DYNAMIC ISLAND" Margin="12,0,0,6"/>
                         <Button Style="{StaticResource RowButton}" Click="TimerRow_Click">
@@ -821,6 +824,13 @@
                                     <local:Digits x:Name="MenuWeather" Foreground="{StaticResource Dim}" VerticalAlignment="Center"/>
                                     <local:Icon Style="{StaticResource RowChevron}" Margin="8,1,0,0"/>
                                 </StackPanel>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="QrRow_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Qr"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="QR-код с экрана"/>
+                                <local:Icon Style="{StaticResource RowChevron}"/>
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource RowButton}" Click="SettingsRow_Click">
@@ -1197,6 +1207,20 @@
                             <Button x:Name="WeatherAction" Style="{StaticResource ChipButton}" Height="36" Margin="-8,14,-8,0"
                                     FontSize="13.5" FontWeight="SemiBold" Click="WeatherAction_Click"/>
                         </StackPanel>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="QrView" Width="320" Height="104" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel Margin="10,8,10,0" VerticalAlignment="Top">
+                        <local:RowList>
+                            <Button Style="{StaticResource BackButton}" Content="QR-КОД С ЭКРАНА" Click="SettingsBack_Click"/>
+                        </local:RowList>
+                        <UniformGrid Rows="1" Margin="2,4,2,0">
+                            <Button Style="{StaticResource ChipButton}" Height="40" FontSize="13.5" FontWeight="SemiBold"
+                                    Content="Весь экран" Click="QrScreen_Click"/>
+                            <Button Style="{StaticResource ChipButton}" Height="40" FontSize="13.5" FontWeight="SemiBold"
+                                    Content="Выбрать область" Click="QrArea_Click"/>
+                        </UniformGrid>
                     </StackPanel>
                 </Grid>
             </Grid>

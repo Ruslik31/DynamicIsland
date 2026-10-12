@@ -8,7 +8,7 @@ public enum Glyph
 {
     Mute, Quiet, Mid, Loud, Headphones, Speaker, Vpn, Offline, Wifi, Wired, Bell, Note, Battery, Minus, Plus, Chevron, Back,
     Clock, Gear, Lines, Sparkle, Rim, Expand, Windows, Power, Look, Size, Gap, Drop, Moon, Tray, Cross, Bolt, VpnOff, Bars, Update,
-    Segments, Stars, Pointer, Record, Folder, Bulge, Sun, Cloud, CloudSun, Rain, Snow, Storm, Fog,
+    Segments, Stars, Pointer, Record, Folder, Bulge, Sun, Cloud, CloudSun, Rain, Snow, Storm, Fog, Qr,
 }
 
 public sealed class Icon : FrameworkElement
@@ -133,6 +133,8 @@ public sealed class Icon : FrameworkElement
             + " M12,18.6 A0.8,0.8 0 1 0 12,20.2 A0.8,0.8 0 1 0 12,18.6 Z M16.4,18.6 A0.8,0.8 0 1 0 16.4,20.2 A0.8,0.8 0 1 0 16.4,18.6 Z"),
         [Glyph.Storm] = new(HighCloud + " M12.5,16.8 L10.1,20.2 H11.8 L11.5,22.7 L13.9,19.3 H12.2 Z"),
         [Glyph.Fog] = new(HighCloud, "M5.5,18.4 H18.5 M8,21.6 H16", 1.8),
+        [Glyph.Qr] = new("M14.3,14.3 H15.9 V15.9 H14.3 Z M18.1,14.3 H19.7 V15.9 H18.1 Z M18.1,18.1 H19.7 V19.7 H18.1 Z",
+            "M4.6,4.6 H9.8 V9.8 H4.6 Z M14.2,4.6 H19.4 V9.8 H14.2 Z M4.6,14.2 H9.8 V19.4 H4.6 Z", 1.8),
         [Glyph.Folder] = new("M3.6,6.6 A1.6,1.6 0 0 1 5.2,5 H9.4 L11.4,7 H18.8 A1.6,1.6 0 0 1 20.4,8.6 V17.4 A1.6,1.6 0 0 1 18.8,19 H5.2"
             + " A1.6,1.6 0 0 1 3.6,17.4 Z"),
     };

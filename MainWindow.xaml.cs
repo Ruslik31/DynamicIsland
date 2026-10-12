@@ -13,9 +13,9 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Update, Loading }
+    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Qr, Update, Loading }
 
-    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Update }
+    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Qr, Update }
 
     readonly record struct PillShape(double Width, double Height, double Radius);
 
@@ -36,11 +36,12 @@ public partial class MainWindow : Window
         [View.TimerSet] = new(300, 190, 38),
         [View.RecordBig] = new(340, 92, 40),
         [View.RecordSet] = new(320, 92, 40),
-        [View.Menu] = new(300, 328, 34),
+        [View.Menu] = new(300, 368, 34),
         [View.Settings] = new(320, 414, 34),
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
         [View.Weather] = new(340, 190, 34),
+        [View.Qr] = new(320, 104, 34),
         [View.Update] = new(320, 150, 34),
         [View.Loading] = new(118, 34, 17),
     };
@@ -59,7 +60,7 @@ public partial class MainWindow : Window
         [View.MediaBig] = new(20, 20, 64, 22, 52, 38, 26, 1),
     };
 
-    static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather];
+    static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather, View.Qr];
 
     const double HostWidth = 620, HostHeight = 592;
     const double CompactMaxHeight = 40;
@@ -126,6 +127,7 @@ public partial class MainWindow : Window
             [View.Look] = LookView,
             [View.Shelf] = ShelfView,
             [View.Weather] = WeatherView,
+            [View.Qr] = QrView,
             [View.Update] = UpdatePage,
             [View.Loading] = LoadingView,
         };
@@ -133,7 +135,7 @@ public partial class MainWindow : Window
         _springs =
         [
             _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleRecord, _bubbleTimer, _bubbleShelf, _shelfBubbleWidth,
-            _shelfScroll, _volumeOvershoot, _leanX, _coverScale, .. _spotSprings,
+            _shelfScroll, _volumeOvershoot, _leanX, _coverScale, _coverSnapX, _coverSnapY, _lyricSnapX, _lyricSnapY, .. _spotSprings,
         ];
         _timerTint = new SolidColorBrush(_orange.Color);
         _recordTint = new SolidColorBrush(_red.Color);
@@ -348,6 +350,7 @@ public partial class MainWindow : Window
             Panel.Update => View.Update,
             Panel.Shelf => View.Shelf,
             Panel.Weather => View.Weather,
+            Panel.Qr => View.Qr,
             Panel.TimerSet => View.TimerSet,
             Panel.Record => _obs.Recording ? View.RecordBig : View.RecordSet,
             Panel.Timer when _countdown.IsActive => View.TimerBig,
