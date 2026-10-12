@@ -13,9 +13,9 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Update, Loading }
+    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Update, Loading }
 
-    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Update }
+    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Update }
 
     readonly record struct PillShape(double Width, double Height, double Radius);
 
@@ -36,10 +36,11 @@ public partial class MainWindow : Window
         [View.TimerSet] = new(300, 190, 38),
         [View.RecordBig] = new(340, 92, 40),
         [View.RecordSet] = new(320, 92, 40),
-        [View.Menu] = new(300, 288, 34),
-        [View.Settings] = new(320, 374, 34),
+        [View.Menu] = new(300, 328, 34),
+        [View.Settings] = new(320, 414, 34),
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
+        [View.Weather] = new(340, 190, 34),
         [View.Update] = new(320, 150, 34),
         [View.Loading] = new(118, 34, 17),
     };
@@ -58,7 +59,7 @@ public partial class MainWindow : Window
         [View.MediaBig] = new(20, 20, 64, 22, 52, 38, 26, 1),
     };
 
-    static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf];
+    static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather];
 
     const double HostWidth = 620, HostHeight = 592;
     const double CompactMaxHeight = 40;
@@ -124,6 +125,7 @@ public partial class MainWindow : Window
             [View.Settings] = SettingsView,
             [View.Look] = LookView,
             [View.Shelf] = ShelfView,
+            [View.Weather] = WeatherView,
             [View.Update] = UpdatePage,
             [View.Loading] = LoadingView,
         };
@@ -161,8 +163,10 @@ public partial class MainWindow : Window
         _shelf.PictureLoaded += OnShelfPictureLoaded;
         _obs.Changed += OnObsChanged;
         _obs.Saved += OnRecordingSaved;
+        _weather.Changed += SyncWeather;
 
         PrepareViews();
+        PrepareWeatherHours();
         ApplyTimerTint();
         ApplyRecordTint();
         TuneDragSprings(false);
@@ -255,6 +259,7 @@ public partial class MainWindow : Window
         SyncAccent(false);
         SyncShelf();
         SyncRecord();
+        SyncWeather();
         SyncGlass(false);
         PlayIntro();
         _ticker.Start();
@@ -325,6 +330,7 @@ public partial class MainWindow : Window
         {
             UpdateClock();
             PollPower();
+            _ = _weather.RefreshAsync();
             Native.KeepOnTop(_hwnd);
             _glass.Place();
             if (_media.IsPlaying) _lastPlayedAt = DateTime.UtcNow;
@@ -341,6 +347,7 @@ public partial class MainWindow : Window
             Panel.Look => View.Look,
             Panel.Update => View.Update,
             Panel.Shelf => View.Shelf,
+            Panel.Weather => View.Weather,
             Panel.TimerSet => View.TimerSet,
             Panel.Record => _obs.Recording ? View.RecordBig : View.RecordSet,
             Panel.Timer when _countdown.IsActive => View.TimerBig,
@@ -417,6 +424,7 @@ public partial class MainWindow : Window
         View.MediaBig when _playerHasLyricRoom => PillShapes[view] with { Height = PlayerHeight + PlayerLyricsHeight },
         View.RecordSet => PillShapes[view] with { Width = RecordSetView.Width },
         View.Update => PillShapes[view] with { Height = UpdatePage.Height },
+        View.Weather => PillShapes[view] with { Height = WeatherView.Height },
         View.Look => PillShapes[view] with { Height = LookView.Height },
         _ => PillShapes[view],
     };
