@@ -856,7 +856,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="SettingsView" Width="320" Height="414" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="SettingsView" Width="320" Height="454" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="НАСТРОЙКИ" Click="SettingsBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="Lyrics_Click">
@@ -864,6 +864,16 @@
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Lines"/>
                                 <TextBlock Style="{StaticResource RowLabel}" Text="Текст песен"/>
                                 <local:Toggle x:Name="LyricsSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="SourcesRow_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Note"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Источники текста"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock x:Name="SourcesText" Foreground="{StaticResource Dim}" VerticalAlignment="Center"/>
+                                    <local:Icon Style="{StaticResource RowChevron}" Margin="8,1,0,0"/>
+                                </StackPanel>
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource RowButton}" Click="LyricEffects_Click">
@@ -923,6 +933,42 @@
                                     <TextBlock x:Name="UpdateText" Foreground="{StaticResource Dim}" VerticalAlignment="Center"/>
                                     <local:Icon Style="{StaticResource RowChevron}" Margin="8,1,0,0"/>
                                 </StackPanel>
+                            </Grid>
+                        </Button>
+                    </local:RowList>
+                </Grid>
+
+                <Grid x:Name="SourcesView" Width="320" Height="254" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:RowList x:Name="SourceRows" Margin="10,8,10,0">
+                        <Button Style="{StaticResource BackButton}" Content="ИСТОЧНИКИ ТЕКСТА" Click="SourcesBack_Click"/>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <TextBlock VerticalAlignment="Center" Text="LRCLIB"/>
+                                <local:Toggle x:Name="LrclibSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <TextBlock VerticalAlignment="Center" Text="Deezer"/>
+                                <local:Toggle x:Name="DeezerSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <TextBlock VerticalAlignment="Center" Text="NetEase"/>
+                                <local:Toggle x:Name="NetEaseSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <TextBlock VerticalAlignment="Center" Text="QQ Music"/>
+                                <local:Toggle x:Name="QqMusicSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <TextBlock VerticalAlignment="Center" Text="Kugou"/>
+                                <local:Toggle x:Name="KugouSwitch" Style="{StaticResource RowSwitch}"/>
                             </Grid>
                         </Button>
                     </local:RowList>

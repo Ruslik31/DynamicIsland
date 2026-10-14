@@ -13,9 +13,9 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Qr, Update, Loading }
+    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Qr, Update, Sources, Loading }
 
-    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Qr, Update }
+    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Qr, Update, Sources }
 
     readonly record struct PillShape(double Width, double Height, double Radius);
 
@@ -37,12 +37,13 @@ public partial class MainWindow : Window
         [View.RecordBig] = new(340, 92, 40),
         [View.RecordSet] = new(320, 92, 40),
         [View.Menu] = new(300, 368, 34),
-        [View.Settings] = new(320, 414, 34),
+        [View.Settings] = new(320, 454, 34),
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
         [View.Weather] = new(340, 190, 34),
         [View.Qr] = new(320, 104, 34),
         [View.Update] = new(320, 150, 34),
+        [View.Sources] = new(320, 254, 34),
         [View.Loading] = new(118, 34, 17),
     };
 
@@ -61,6 +62,8 @@ public partial class MainWindow : Window
     };
 
     static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather, View.Qr];
+
+    static readonly View[] SettingsPages = [View.Update, View.Sources];
 
     const double HostWidth = 620, HostHeight = 592;
     const double CompactMaxHeight = 40;
@@ -129,6 +132,7 @@ public partial class MainWindow : Window
             [View.Weather] = WeatherView,
             [View.Qr] = QrView,
             [View.Update] = UpdatePage,
+            [View.Sources] = SourcesView,
             [View.Loading] = LoadingView,
         };
         _spotSprings = [_coverLeft, _coverTop, _coverSize, _barsRight, _barsCenterY, _barsWidth, _barsHeight, _barsOpen];
@@ -348,6 +352,7 @@ public partial class MainWindow : Window
             Panel.Settings => View.Settings,
             Panel.Look => View.Look,
             Panel.Update => View.Update,
+            Panel.Sources => View.Sources,
             Panel.Shelf => View.Shelf,
             Panel.Weather => View.Weather,
             Panel.Qr => View.Qr,
@@ -418,8 +423,8 @@ public partial class MainWindow : Window
     }
 
     static int MenuDirection(View from, View to) =>
-        from == View.Menu && MenuPages.Contains(to) || (from, to) == (View.Settings, View.Update) ? 1
-        : to == View.Menu && MenuPages.Contains(from) || (from, to) == (View.Update, View.Settings) ? -1 : 0;
+        from == View.Menu && MenuPages.Contains(to) || from == View.Settings && SettingsPages.Contains(to) ? 1
+        : to == View.Menu && MenuPages.Contains(from) || to == View.Settings && SettingsPages.Contains(from) ? -1 : 0;
 
     PillShape ShapeOf(View view) => view switch
     {
