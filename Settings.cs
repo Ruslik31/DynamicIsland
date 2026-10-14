@@ -27,7 +27,9 @@ enum LyricSource
     NetEase = 4,
     QqMusic = 8,
     Kugou = 16,
-    All = Lrclib | Deezer | NetEase | QqMusic | Kugou,
+    Paxsenix = 32,
+    Usual = Lrclib | Deezer | NetEase | QqMusic | Kugou,
+    All = Usual | Paxsenix,
 }
 
 enum Hover
@@ -59,7 +61,7 @@ static class Settings
     static bool _glass = ReadSwitch(nameof(Glass), false);
     static Backdrop _backdrop = (Backdrop)Math.Clamp(Read(nameof(Backdrop), 0), 0, (int)Backdrop.MatrixAndStars);
     static LyricChange _lyricChange = (LyricChange)Math.Clamp(Read(nameof(LyricChange), (int)LyricChange.Wave), 0, (int)LyricChange.Drum);
-    static LyricSource _lyricSources = Known((LyricSource)Read(nameof(LyricSources), (int)LyricSource.All));
+    static LyricSource _lyricSources = Known((LyricSource)Read(nameof(LyricSources), (int)LyricSource.Usual));
     static Hover _hover = (Hover)Math.Clamp(Read(nameof(Hover), 0), 0, (int)Hover.Flow);
     static SeekHover _seekHover = (SeekHover)Math.Clamp(Read(nameof(SeekHover), 0), 0, (int)SeekHover.Wave);
     static int _scale = Math.Clamp(Read(nameof(Scale), DefaultScale), MinScale, MaxScale);
@@ -180,7 +182,7 @@ static class Settings
         set => Write(nameof(Shelf), value, RegistryValueKind.MultiString);
     }
 
-    static LyricSource Known(LyricSource sources) => (sources & LyricSource.All) == 0 ? LyricSource.All : sources & LyricSource.All;
+    static LyricSource Known(LyricSource sources) => (sources & LyricSource.All) == 0 ? LyricSource.Usual : sources & LyricSource.All;
 
     static bool ReadSwitch(string name, bool fallback = true) => Read(name, fallback ? 1 : 0) != 0;
 

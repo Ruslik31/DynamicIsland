@@ -16,7 +16,7 @@ public partial class MainWindow
 
     const int FirstSourceRow = 1;
 
-    static readonly string[] SourceNames = ["LRCLIB", "Deezer", "NetEase", "QQ Music", "Kugou"];
+    static readonly string[] SourceNames = ["LRCLIB", "Deezer", "NetEase", "QQ Music", "Kugou", "Paxsenix"];
 
     Border? _openLookTiles;
 
@@ -111,7 +111,7 @@ public partial class MainWindow
         FullscreenSwitch.Set(Settings.HideFullscreen, animate);
         AutostartSwitch.Set(Autostart.Enabled, animate);
 
-        Toggle[] sources = [LrclibSwitch, DeezerSwitch, NetEaseSwitch, QqMusicSwitch, KugouSwitch];
+        Toggle[] sources = [LrclibSwitch, DeezerSwitch, NetEaseSwitch, QqMusicSwitch, KugouSwitch, PaxsenixSwitch];
         string[] chosen = SourceNames.Where((_, i) => Settings.LyricSources.HasFlag((LyricSource)(1 << i))).ToArray();
         for (int i = 0; i < sources.Length; i++) sources[i].Set(Settings.LyricSources.HasFlag((LyricSource)(1 << i)), animate);
         SourcesText.Text = chosen.Length == sources.Length ? "Все" : chosen.Length == 1 ? chosen[0] : $"{chosen.Length} из {sources.Length}";

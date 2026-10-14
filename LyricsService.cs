@@ -28,7 +28,7 @@ sealed partial class LyricsService
 
     static readonly Line[] None = [];
     static readonly HttpClient Http = CreateClient();
-    static readonly Source[] Sources = [FromLrclib, FromDeezer, FromNetEase, FromQqMusic, FromKugou];
+    static readonly Source[] Sources = [FromLrclib, FromDeezer, FromNetEase, FromQqMusic, FromKugou, FromPaxsenix];
     const string Rework = @"remix|rmx|sped\s*up|speed\s*up|slowed|reverb|nightcore|hardstyle|phonk|bootleg|mashup|ремикс";
 
     static readonly Regex Noise = new(

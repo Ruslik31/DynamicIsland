@@ -938,7 +938,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="SourcesView" Width="320" Height="254" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="SourcesView" Width="320" Height="294" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList x:Name="SourceRows" Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="ИСТОЧНИКИ ТЕКСТА" Click="SourcesBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="Source_Click">
@@ -969,6 +969,17 @@
                             <Grid>
                                 <TextBlock VerticalAlignment="Center" Text="Kugou"/>
                                 <local:Toggle x:Name="KugouSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="Source_Click">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Paxsenix"/>
+                                    <Border Background="#33FF9F0A" CornerRadius="5" Padding="5,1,5,2" Margin="8,1,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="BETA" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Orange}"/>
+                                    </Border>
+                                </StackPanel>
+                                <local:Toggle x:Name="PaxsenixSwitch" Style="{StaticResource RowSwitch}"/>
                             </Grid>
                         </Button>
                     </local:RowList>

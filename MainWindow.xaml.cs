@@ -43,7 +43,7 @@ public partial class MainWindow : Window
         [View.Weather] = new(340, 190, 34),
         [View.Qr] = new(320, 104, 34),
         [View.Update] = new(320, 150, 34),
-        [View.Sources] = new(320, 254, 34),
+        [View.Sources] = new(320, 294, 34),
         [View.Loading] = new(118, 34, 17),
     };
 

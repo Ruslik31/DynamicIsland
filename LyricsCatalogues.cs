@@ -27,6 +27,8 @@ sealed partial class LyricsService
     const string KugouLyricSearchUrl = "https://krcs.kugou.com/search?ver=1&man=yes&client=mobi&hash=";
     const string KugouLyricUrl = "https://lyrics.kugou.com/download?ver=1&client=pc&fmt=lrc&charset=utf8&id=";
     const string KugouArtistSeparator = "、";
+    const string AppleSearchUrl = "https://itunes.apple.com/search?entity=song&limit=10&country=ru&term=";
+    const string PaxsenixLyricUrl = "https://lyrics.paxsenix.org/apple-music/lyrics?id=";
     const string Browser = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
     const double MillisecondsPerSecond = 1000;
     const int VersionsPerCatalogue = 3;
@@ -48,6 +50,8 @@ sealed partial class LyricsService
     static Task<Candidate[]> FromQqMusic(string title, string artist) => FromCatalogue(title, artist, SearchQqMusic, QqMusicLyric);
 
     static Task<Candidate[]> FromKugou(string title, string artist) => FromCatalogue(title, artist, SearchKugou, KugouLyric);
+
+    static Task<Candidate[]> FromPaxsenix(string title, string artist) => FromCatalogue(title, artist, SearchApple, PaxsenixLyric);
 
     static async Task<Candidate[]> FromCatalogue(string title, string artist, Func<string, Task<Hit[]>> search, Func<Hit, Task<string>> lyric)
     {
@@ -167,6 +171,21 @@ sealed partial class LyricsService
         string address = KugouLyricUrl + Uri.EscapeDataString(Text(version, "id")) + "&accesskey=" + Uri.EscapeDataString(Text(version, "accesskey"));
         using JsonDocument? json = await AskAsync(address, KugouSite);
         return json == null ? "" : Decoded(Text(json.RootElement, "content"));
+    }
+
+    static async Task<Hit[]> SearchApple(string query)
+    {
+        using JsonDocument? json = await AskAsync(AppleSearchUrl + query);
+        return Items(json, "results")
+            .Select(song => new Hit(Text(song, "trackId"), Text(song, "trackName"), [Text(song, "artistName")],
+                Number(song, "trackTimeMillis") / MillisecondsPerSecond))
+            .ToArray();
+    }
+
+    static async Task<string> PaxsenixLyric(Hit hit)
+    {
+        using JsonDocument? json = await AskAsync(PaxsenixLyricUrl + hit.Id);
+        return json == null ? "" : Text(json.RootElement, "lrc");
     }
 
     static string Decoded(string base64)
