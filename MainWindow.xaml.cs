@@ -13,9 +13,9 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Qr, Update, Sources, Loading }
+    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Sources, Loading }
 
-    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Qr, Update, Sources }
+    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Sources }
 
     readonly record struct PillShape(double Width, double Height, double Radius);
 
@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
         [View.Weather] = new(340, 190, 34),
+        [View.Place] = new(320, 200, 34),
         [View.Qr] = new(320, 104, 34),
         [View.Update] = new(320, 150, 34),
         [View.Sources] = new(320, 294, 34),
@@ -64,6 +65,8 @@ public partial class MainWindow : Window
     static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather, View.Qr];
 
     static readonly View[] SettingsPages = [View.Update, View.Sources];
+
+    static readonly View[] WeatherPages = [View.Place];
 
     const double HostWidth = 620, HostHeight = 592;
     const double CompactMaxHeight = 40;
@@ -130,6 +133,7 @@ public partial class MainWindow : Window
             [View.Look] = LookView,
             [View.Shelf] = ShelfView,
             [View.Weather] = WeatherView,
+            [View.Place] = PlaceView,
             [View.Qr] = QrView,
             [View.Update] = UpdatePage,
             [View.Sources] = SourcesView,
@@ -157,6 +161,7 @@ public partial class MainWindow : Window
         _awayTimeout = new DelayedAction(ReturnFromAway);
         _overshootTimeout = new DelayedAction(ReleaseVolumeOvershoot);
         _dragLeaveTimeout = new DelayedAction(OnDragLeft);
+        _placeSearch = new DelayedAction(SearchPlaces);
 
         _media = new MediaService(Dispatcher);
         _media.Changed += OnMediaChanged;
@@ -178,6 +183,7 @@ public partial class MainWindow : Window
         TuneDragSprings(false);
         _ticker.Tick += (_, _) => TickSafely();
         Loaded += OnLoaded;
+        Deactivated += OnDeactivated;
     }
 
     void PrepareViews()
@@ -355,6 +361,7 @@ public partial class MainWindow : Window
             Panel.Sources => View.Sources,
             Panel.Shelf => View.Shelf,
             Panel.Weather => View.Weather,
+            Panel.Place => View.Place,
             Panel.Qr => View.Qr,
             Panel.TimerSet => View.TimerSet,
             Panel.Record => _obs.Recording ? View.RecordBig : View.RecordSet,
@@ -395,6 +402,8 @@ public partial class MainWindow : Window
 
         _morphing = true;
         SwitchView(_views[target], MenuDirection(previous, target));
+        if (target == View.Place) BeginTyping();
+        else if (previous == View.Place) EndTyping();
         MoveMediaSpot(previous, target, to);
         UpdateTargets();
     }
@@ -423,8 +432,11 @@ public partial class MainWindow : Window
     }
 
     static int MenuDirection(View from, View to) =>
-        from == View.Menu && MenuPages.Contains(to) || from == View.Settings && SettingsPages.Contains(to) ? 1
-        : to == View.Menu && MenuPages.Contains(from) || to == View.Settings && SettingsPages.Contains(from) ? -1 : 0;
+        IsPageOf(from, to) ? 1 : IsPageOf(to, from) ? -1 : 0;
+
+    static bool IsPageOf(View parent, View page) =>
+        parent == View.Menu && MenuPages.Contains(page) || parent == View.Settings && SettingsPages.Contains(page)
+        || parent == View.Weather && WeatherPages.Contains(page);
 
     PillShape ShapeOf(View view) => view switch
     {
@@ -433,6 +445,7 @@ public partial class MainWindow : Window
         View.RecordSet => PillShapes[view] with { Width = RecordSetView.Width },
         View.Update => PillShapes[view] with { Height = UpdatePage.Height },
         View.Weather => PillShapes[view] with { Height = WeatherView.Height },
+        View.Place => PillShapes[view] with { Height = PlaceView.Height },
         View.Look => PillShapes[view] with { Height = LookView.Height },
         _ => PillShapes[view],
     };
@@ -469,7 +482,7 @@ public partial class MainWindow : Window
 
     void Collapse()
     {
-        if (_hovered || _pickingFiles) return;
+        if (_hovered || _pickingFiles || IsTyping) return;
         ShowPanel(Panel.None);
     }
 

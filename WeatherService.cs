@@ -16,6 +16,8 @@ enum Sky
     Storm,
 }
 
+sealed record Place(string Name, string Region, double Latitude, double Longitude);
+
 sealed class WeatherService
 {
     public enum Stage { Off, Loading, Ready, NoPlace, Failed }
@@ -29,6 +31,8 @@ sealed class WeatherService
     const string ForecastUrl = "https://api.open-meteo.com/v1/forecast"
         + "?current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day"
         + "&hourly=temperature_2m,weather_code,is_day&forecast_hours=6&wind_speed_unit=ms&timezone=auto";
+    const string SearchUrl = "https://geocoding-api.open-meteo.com/v1/search?language=ru&format=json";
+    const int FoundPlaces = 5, AskedPlaces = 15;
     const uint PlaceAccuracyMeters = 5000;
     const int PlaceDigits = 2;
     static readonly TimeSpan ReadEvery = TimeSpan.FromMinutes(15);
@@ -41,6 +45,7 @@ sealed class WeatherService
     Geolocator? _locator;
     DateTime _readAgainAt, _reportAt;
     bool _reading;
+    int _moves;
 
     public event Action? Changed;
 
@@ -60,24 +65,45 @@ sealed class WeatherService
         _reading = true;
         if (Now == null) Set(Stage.Loading);
         Stage reached;
-        try
+        int moves;
+        do
         {
-            reached = await ReadAsync();
+            moves = _moves;
+            reached = await TryReadAsync();
         }
-        catch (Exception ex)
-        {
-            if (ex is not (HttpRequestException or TaskCanceledException)) App.Log(ex);
-            reached = Stage.Failed;
-        }
-        finally
-        {
-            _reading = false;
-        }
+        while (moves != _moves && Settings.Weather);
+        _reading = false;
 
         _readAgainAt = DateTime.UtcNow + (reached == Stage.Ready ? ReadEvery : RetryAfter);
         bool fresh = Now != null && DateTime.UtcNow - _reportAt < StaleAfter;
         Set(!Settings.Weather ? Stage.Off : fresh ? Stage.Ready : reached);
     }
+
+    public void Relocate()
+    {
+        _moves++;
+        Set(Settings.Weather ? Stage.Loading : Stage.Off);
+        _ = RefreshAsync(true);
+    }
+
+    public static async Task<Place[]> SearchAsync(string query, CancellationToken cancel)
+    {
+        string url = string.Create(CultureInfo.InvariantCulture, $"{SearchUrl}&count={AskedPlaces}&name={Uri.EscapeDataString(query)}");
+        using var stream = await Http.GetStreamAsync(url, cancel);
+        using JsonDocument json = await JsonDocument.ParseAsync(stream, cancellationToken: cancel);
+        if (!json.RootElement.TryGetProperty("results", out JsonElement found)) return [];
+
+        return found.EnumerateArray().Select(place =>
+        {
+            string name = Text(place, "name");
+            string[] around = new[] { Text(place, "admin1"), Text(place, "country") }
+                .Where(part => part.Length > 0 && part != name).Distinct().ToArray();
+            return new Place(name, string.Join(", ", around), place.GetProperty("latitude").GetDouble(), place.GetProperty("longitude").GetDouble());
+        }).DistinctBy(place => (place.Name, place.Region)).Take(FoundPlaces).ToArray();
+    }
+
+    static string Text(JsonElement owner, string name) =>
+        owner.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : "";
 
     void Set(Stage stage)
     {
@@ -86,14 +112,30 @@ sealed class WeatherService
         Changed?.Invoke();
     }
 
+    async Task<Stage> TryReadAsync()
+    {
+        try
+        {
+            return await ReadAsync();
+        }
+        catch (Exception ex)
+        {
+            if (ex is not (HttpRequestException or TaskCanceledException)) App.Log(ex);
+            return Stage.Failed;
+        }
+    }
+
     async Task<Stage> ReadAsync()
     {
+        int moves = _moves;
         if (await LocateAsync() is not { } place) return Stage.NoPlace;
 
         string url = string.Create(CultureInfo.InvariantCulture,
             $"{ForecastUrl}&latitude={Math.Round(place.Latitude, PlaceDigits)}&longitude={Math.Round(place.Longitude, PlaceDigits)}");
         using var stream = await Http.GetStreamAsync(url);
         using JsonDocument json = await JsonDocument.ParseAsync(stream);
+        if (moves != _moves) return Stage.Loading;
+
         Now = Parse(json.RootElement);
         _reportAt = DateTime.UtcNow;
         return Stage.Ready;
@@ -101,6 +143,8 @@ sealed class WeatherService
 
     async Task<BasicGeoposition?> LocateAsync()
     {
+        if (Settings.Place is { } chosen) return new BasicGeoposition { Latitude = chosen.Latitude, Longitude = chosen.Longitude };
+
         try
         {
             if (await Geolocator.RequestAccessAsync() != GeolocationAccessStatus.Allowed) return null;

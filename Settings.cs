@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows.Media;
 using Microsoft.Win32;
 
@@ -56,6 +57,7 @@ static class Settings
     static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen));
     static bool _rim = ReadSwitch(nameof(Rim)), _appVolume = ReadSwitch(nameof(AppVolume));
     static bool _weather = ReadSwitch(nameof(Weather));
+    static Place? _place = ReadPlace();
     static bool _dots = ReadSwitch(nameof(Dots), false);
     static bool _lineBar = ReadSwitch(nameof(LineBar));
     static bool _glass = ReadSwitch(nameof(Glass), false);
@@ -152,6 +154,17 @@ static class Settings
         set => Write(nameof(Weather), _weather = value);
     }
 
+    public static Place? Place
+    {
+        get => _place;
+        set
+        {
+            _place = value;
+            string[] stored = value is { } place ? [place.Name, place.Region, Coordinate(place.Latitude), Coordinate(place.Longitude)] : [];
+            Write(nameof(Place), stored, RegistryValueKind.MultiString);
+        }
+    }
+
     public static bool HideFullscreen
     {
         get => _hideFullscreen;
@@ -183,6 +196,14 @@ static class Settings
     }
 
     static LyricSource Known(LyricSource sources) => (sources & LyricSource.All) == 0 ? LyricSource.Usual : sources & LyricSource.All;
+
+    static Place? ReadPlace() =>
+        Read<string[]>(nameof(Place), []) is [var name, var region, var latitude, var longitude]
+        && double.TryParse(latitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double lat)
+        && double.TryParse(longitude, NumberStyles.Float, CultureInfo.InvariantCulture, out double lon)
+            ? new Place(name, region, lat, lon) : null;
+
+    static string Coordinate(double degrees) => degrees.ToString("R", CultureInfo.InvariantCulture);
 
     static bool ReadSwitch(string name, bool fallback = true) => Read(name, fallback ? 1 : 0) != 0;
 

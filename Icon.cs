@@ -8,7 +8,7 @@ public enum Glyph
 {
     Mute, Quiet, Mid, Loud, Headphones, Speaker, Vpn, Offline, Wifi, Wired, Bell, Note, Battery, Minus, Plus, Chevron, Back,
     Clock, Gear, Lines, Sparkle, Rim, Expand, Windows, Power, Look, Size, Gap, Drop, Moon, Tray, Cross, Bolt, VpnOff, Bars, Update,
-    Segments, Stars, Pointer, Record, Folder, Bulge, Sun, Cloud, CloudSun, Rain, Snow, Storm, Fog, Qr,
+    Segments, Stars, Pointer, Record, Folder, Bulge, Sun, Cloud, CloudSun, Rain, Snow, Storm, Fog, Qr, Pin, Search, Check,
 }
 
 public sealed class Icon : FrameworkElement
@@ -137,6 +137,10 @@ public sealed class Icon : FrameworkElement
             "M4.6,4.6 H9.8 V9.8 H4.6 Z M14.2,4.6 H19.4 V9.8 H14.2 Z M4.6,14.2 H9.8 V19.4 H4.6 Z", 1.8),
         [Glyph.Folder] = new("M3.6,6.6 A1.6,1.6 0 0 1 5.2,5 H9.4 L11.4,7 H18.8 A1.6,1.6 0 0 1 20.4,8.6 V17.4 A1.6,1.6 0 0 1 18.8,19 H5.2"
             + " A1.6,1.6 0 0 1 3.6,17.4 Z"),
+        [Glyph.Pin] = new("M12,2.8 C8.3,2.8 5.4,5.6 5.4,9.3 C5.4,14 12,21.2 12,21.2 C12,21.2 18.6,14 18.6,9.3 C18.6,5.6 15.7,2.8 12,2.8 Z",
+            Cut: "M12,9.3 L12.01,9.3", Gap: 5),
+        [Glyph.Search] = new(Lines: "M10.6,4.4 A6.2,6.2 0 1 0 10.6,16.8 A6.2,6.2 0 1 0 10.6,4.4 Z M15.2,15.2 L19.8,19.8", Line: 2.2),
+        [Glyph.Check] = new(Lines: "M5.2,12.6 L9.8,17.2 L18.8,7.2", Line: 2.6),
     };
 
     static readonly Dictionary<Glyph, Geometry> Outlines = [];
