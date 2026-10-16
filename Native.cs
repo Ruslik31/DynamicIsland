@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Interop;
 
 namespace DynamicIsland;
 
@@ -17,10 +16,12 @@ static class Native
     const long WS_EX_NOACTIVATE = 0x08000000;
     const long WS_EX_TRANSPARENT = 0x00000020, WS_EX_LAYERED = 0x00080000, WS_EX_TOPMOST = 0x00000008;
     const long WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
-    const long WS_POPUP = 0x80000000, WS_VISIBLE = 0x10000000;
-    const int WM_NCHITTEST = 0x0084, HTTRANSPARENT = -1;
+    const long WS_POPUP = 0x80000000;
     const uint LWA_ALPHA = 2;
-    const int SW_SHOWNOACTIVATE = 4;
+    const int SW_HIDE = 0, SW_SHOWNOACTIVATE = 4;
+    const int SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77, SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
+    const int MDT_EFFECTIVE_DPI = 0;
+    const double DefaultDpi = 96;
     const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010;
     const uint MONITOR_DEFAULTTONEAREST = 2;
     const uint MONITORINFOF_PRIMARY = 1;
@@ -32,6 +33,7 @@ static class Native
     const int DWMWA_USE_HOSTBACKDROPBRUSH = 17;
     const int DQTYPE_THREAD_CURRENT = 2, DQTAT_COM_STA = 2;
     static readonly IntPtr HWND_TOPMOST = new(-1);
+    static bool _dispatcherQueueStarted;
     static readonly int ShellMessage = (int)RegisterWindowMessage("SHELLHOOK");
 
     [StructLayout(LayoutKind.Sequential)]
@@ -85,6 +87,8 @@ static class Native
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(POINT point, uint flags);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
+    [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+    [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     static extern int GetClassName(IntPtr hwnd, StringBuilder name, int max);
@@ -123,24 +127,18 @@ static class Native
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
 
-    public static HwndSourceParameters PassThroughOverlay(string name, int width, int height) => new(name, width, height)
-    {
-        WindowStyle = unchecked((int)(WS_POPUP | WS_VISIBLE)),
-        ExtendedWindowStyle = (int)(WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST),
-        UsesPerPixelOpacity = true,
-    };
+    public static Int32Rect VirtualScreen => new(GetSystemMetrics(SM_XVIRTUALSCREEN), GetSystemMetrics(SM_YVIRTUALSCREEN),
+        GetSystemMetrics(SM_CXVIRTUALSCREEN), GetSystemMetrics(SM_CYVIRTUALSCREEN));
 
-    public static IntPtr PassHitsThrough(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (message != WM_NCHITTEST) return IntPtr.Zero;
-        handled = true;
-        return new IntPtr(HTTRANSPARENT);
-    }
+    static IntPtr MonitorAt(Point point) => MonitorFromPoint(new POINT { X = (int)point.X, Y = (int)point.Y }, MONITOR_DEFAULTTONEAREST);
+
+    public static double ScaleAt(Point point) =>
+        GetDpiForMonitor(MonitorAt(point), MDT_EFFECTIVE_DPI, out uint dpi, out _) == 0 && dpi > 0 ? dpi / DefaultDpi : 1;
 
     public static Rect WorkAreaAt(Point point)
     {
         var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        IntPtr monitor = MonitorFromPoint(new POINT { X = (int)point.X, Y = (int)point.Y }, MONITOR_DEFAULTTONEAREST);
+        IntPtr monitor = MonitorAt(point);
         if (!GetMonitorInfo(monitor, ref info)) return Rect.Empty;
         RECT work = info.rcWork;
         return new Rect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top);
@@ -149,11 +147,17 @@ static class Native
     public static void MoveAndSize(IntPtr hwnd, int x, int y, int width, int height) =>
         SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
 
-    public static IntPtr CreateBackdropWindow()
+    public static IntPtr CreateOverlayWindow()
     {
         long style = WS_EX_NOREDIRECTIONBITMAP | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST;
         IntPtr hwnd = CreateWindowEx((uint)style, "Static", null, (uint)WS_POPUP, 0, 0, 0, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
         SetLayeredWindowAttributes(hwnd, 0, byte.MaxValue, LWA_ALPHA);
+        return hwnd;
+    }
+
+    public static IntPtr CreateBackdropWindow()
+    {
+        IntPtr hwnd = CreateOverlayWindow();
         int on = 1;
         DwmSetWindowAttribute(hwnd, DWMWA_USE_HOSTBACKDROPBRUSH, ref on, sizeof(int));
         return hwnd;
@@ -168,10 +172,18 @@ static class Native
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
 
-    public static bool StartDispatcherQueue()
+    public static void PutBehind(IntPtr hwnd, IntPtr front) =>
+        SetWindowPos(hwnd, front, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+    public static void ShowQuietly(IntPtr hwnd) => ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+
+    public static void Hide(IntPtr hwnd) => ShowWindow(hwnd, SW_HIDE);
+
+    public static void EnsureDispatcherQueue()
     {
+        if (_dispatcherQueueStarted) return;
         var options = new DispatcherQueueOptions { dwSize = Marshal.SizeOf<DispatcherQueueOptions>(), threadType = DQTYPE_THREAD_CURRENT, apartmentType = DQTAT_COM_STA };
-        return CreateDispatcherQueueController(options, out _) >= 0;
+        _dispatcherQueueStarted = CreateDispatcherQueueController(options, out _) >= 0;
     }
 
     public static bool IsToolWindow(IntPtr hwnd) => (GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64() & WS_EX_TOOLWINDOW) != 0;

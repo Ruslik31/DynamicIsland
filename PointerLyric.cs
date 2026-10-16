@@ -1,18 +1,22 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Windows.UI.Composition;
+using Windows.UI.Composition.Desktop;
+using ContainerVisual = Windows.UI.Composition.ContainerVisual;
+using Vector = System.Windows.Vector;
 
 namespace DynamicIsland;
 
 sealed class PointerLyric
 {
     const double TextSize = 17;
-    const double MaxTextWidth = 460, RoomPadding = 90, RoomHeight = 220;
-    const double RoomWidth = MaxTextWidth + 2 * RoomPadding;
+    const double MaxTextWidth = 460;
     const string Ellipsis = "…";
     const char FirstJoinedLetter = '֐', LastJoinedLetter = 'ࣿ';
 
@@ -34,40 +38,27 @@ sealed class PointerLyric
 
     const double EnterDepth = 300, EnterRise = 14, EnterSeconds = 0.62, EnterStepSeconds = 0.024, EnterSpreadSeconds = 0.36;
     const double LeaveDepth = 260, LeaveRise = 18, LeaveSeconds = 0.44;
-    const double CalmFrameSeconds = 1.0 / 30;
 
+    const double PrintMargin = 14, PrintDpi = 96;
     const double ShadowBlur = 12, ShadowDrop = 2, ShadowDown = 270, ShadowOpacity = 0.7;
     static readonly TimeSpan HiddenPoll = TimeSpan.FromMilliseconds(60);
-    static readonly (int X, int Y, int Width, int Height) NowhereYet = (int.MinValue, int.MinValue, 0, 0);
 
-    sealed class Stage : FrameworkElement
-    {
-        readonly VisualCollection _visuals;
+    sealed record Letter(SpriteVisual Visual, Vector2 Pivot, double X, double AppearAt);
 
-        public Stage() => _visuals = new VisualCollection(this);
-
-        public void Add(Visual visual) => _visuals.Add(visual);
-
-        public void Remove(Visual visual) => _visuals.Remove(visual);
-
-        protected override int VisualChildrenCount => _visuals.Count;
-
-        protected override Visual GetVisualChild(int index) => _visuals[index];
-    }
-
-    sealed record Letter(DrawingVisual Visual, MatrixTransform Place, double X, double AppearAt);
-
-    sealed record Line(string Text, ContainerVisual Visual, Letter[] Letters, double Width)
+    sealed record Line(string Text, ContainerVisual Visual, CompositionDrawingSurface Surface, Letter[] Letters, double Width, double Scale)
     {
         public double LeftAt { get; set; } = double.NaN;
 
         public bool IsLeaving => !double.IsNaN(LeftAt);
     }
 
-    readonly record struct Pose(double Side, double Yaw, double Pitch, double Roll, double Depth, double Rise, Vector Speed, double Shown);
+    readonly record struct Pose(double Side, double Yaw, double Pitch, double Roll, double Depth, double Rise, Vector Speed, double Shown, double Scale, Point Anchor);
 
-    readonly HwndSource _source;
-    readonly Stage _stage = new();
+    readonly IntPtr _hwnd;
+    readonly Compositor _compositor;
+    readonly DesktopWindowTarget _target;
+    readonly ContainerVisual _root;
+    readonly DrawingSurfaces _surfaces;
     readonly FrameLoop _loop;
     readonly DispatcherTimer _hiddenPoll = new() { Interval = HiddenPoll };
     readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -78,44 +69,38 @@ sealed class PointerLyric
     readonly Typeface _typeface;
     Line? _line, _leaving;
     int _sideTarget = 1;
-    double _calmFor;
-    (int X, int Y, int Width, int Height) _placed = NowhereYet;
+    double _scale = 1;
+    Int32Rect _screen;
 
     public PointerLyric(FontFamily font, Func<bool> isPointerOverIsland)
     {
         _typeface = new Typeface(font, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
         _isPointerOverIsland = isPointerOverIsland;
 
-        _stage.Effect = new DropShadowEffect
-        {
-            BlurRadius = ShadowBlur, ShadowDepth = ShadowDrop, Direction = ShadowDown, Opacity = ShadowOpacity, Color = Colors.Black,
-        };
-        HwndSourceParameters parameters = Native.PassThroughOverlay(nameof(PointerLyric), (int)RoomWidth, (int)RoomHeight);
-        parameters.PositionX = (int)(SystemParameters.VirtualScreenLeft - 2 * RoomWidth);
-        parameters.PositionY = (int)(SystemParameters.VirtualScreenTop - 2 * RoomHeight);
-        _source = new HwndSource(parameters);
-        _source.AddHook(Native.PassHitsThrough);
-        _source.CompositionTarget.BackgroundColor = Colors.Transparent;
-        _source.RootVisual = _stage;
+        Native.EnsureDispatcherQueue();
+        _hwnd = Native.CreateOverlayWindow();
+        _compositor = new Compositor();
+        _target = DesktopComposition.TargetFor(_compositor, _hwnd);
+        _root = _compositor.CreateContainerVisual();
+        _target.Root = _root;
+        _surfaces = new DrawingSurfaces(_compositor);
 
         _loop = new FrameLoop(Advance);
         _hiddenPoll.Tick += (_, _) => WakeIfRevealed();
     }
 
-    public IntPtr Handle => _source.Handle;
+    public IntPtr Handle => _hwnd;
 
     public string Text => _line?.Text ?? "";
 
     double Now => _clock.Elapsed.TotalSeconds;
-
-    double Scale => _source.CompositionTarget.TransformToDevice.M11;
 
     public void ShowLine(string text)
     {
         if (text == Text) return;
 
         bool wasEmpty = _line == null && _leaving == null;
-        if (_leaving != null) _stage.Remove(_leaving.Visual);
+        if (_leaving != null) Discard(_leaving);
         _leaving = _line;
         if (_leaving != null) _leaving.LeftAt = Now;
         if (wasEmpty && text.Length > 0) Settle(Native.CursorPosition, text);
@@ -127,30 +112,39 @@ sealed class PointerLyric
 
     void Settle(Point pointer, string text)
     {
+        CoverScreen();
+        Native.ShowQuietly(_hwnd);
+        _scale = Native.ScaleAt(pointer);
         _shown.Snap(_isPointerOverIsland() ? 0 : 1);
-        double width = Math.Min(Measure(text, Scale), MaxTextWidth);
-        ChooseSide(pointer, Scale, width, true);
+        double width = Math.Min(Measure(text, _scale), MaxTextWidth);
+        ChooseSide(pointer, width, true);
         SnapTo(pointer, width);
+    }
+
+    void CoverScreen()
+    {
+        Int32Rect screen = Native.VirtualScreen;
+        if (screen == _screen) return;
+        _screen = screen;
+        Native.MoveAndSize(_hwnd, screen.X, screen.Y, screen.Width, screen.Height);
     }
 
     void SnapTo(Point pointer, double width)
     {
-        double scale = Scale;
-        Point spot = SpotNear(pointer, scale, width);
+        Point spot = SpotNear(pointer, width);
         _followX.Snap(spot.X);
         _followY.Snap(spot.Y);
         _side.Snap(_sideTarget);
-        Place(scale);
     }
 
     double TextWidth => _line?.Width ?? _leaving?.Width ?? 0;
 
-    void ChooseSide(Point pointer, double scale, double width, bool snap)
+    void ChooseSide(Point pointer, double width, bool snap)
     {
         Rect work = Native.WorkAreaAt(pointer);
         if (work.IsEmpty) return;
 
-        double need = (SideGap + width + ScreenMargin) * scale, toReturn = SideRoomToReturn * scale;
+        double need = (SideGap + width + ScreenMargin) * _scale, toReturn = SideRoomToReturn * _scale;
         double right = work.Right - pointer.X, left = pointer.X - work.Left;
         if (snap) _sideTarget = right >= need || right >= left ? 1 : -1;
         else if (_sideTarget > 0 && right < need && left > right) _sideTarget = -1;
@@ -158,15 +152,15 @@ sealed class PointerLyric
         _side.Target = _sideTarget;
     }
 
-    Point SpotNear(Point pointer, double scale, double width)
+    Point SpotNear(Point pointer, double width)
     {
-        double halfHeight = TextSize * scale;
-        double x = pointer.X + _sideTarget * (SideGap + width / 2) * scale, y = pointer.Y + BelowPointer * scale;
+        double halfHeight = TextSize * _scale;
+        double x = pointer.X + _sideTarget * (SideGap + width / 2) * _scale, y = pointer.Y + BelowPointer * _scale;
 
         Rect work = Native.WorkAreaAt(pointer);
         if (work.IsEmpty) return new Point(x, y);
 
-        double margin = ScreenMargin * scale, reach = width / 2 * scale + margin;
+        double margin = ScreenMargin * _scale, reach = width / 2 * _scale + margin;
         x = work.Width > 2 * reach ? Math.Clamp(x, work.Left + reach, work.Right - reach) : work.Left + work.Width / 2;
         y = Math.Clamp(y, work.Top + halfHeight + margin, Math.Max(work.Top + halfHeight + margin, work.Bottom - halfHeight - margin));
         return new Point(x, y);
@@ -174,63 +168,48 @@ sealed class PointerLyric
 
     bool Advance(double dt)
     {
-        if (_line == null && _leaving == null) return false;
-
-        double now = Now, scale = Scale, width = TextWidth;
+        double now = Now, width = TextWidth;
         Point pointer = Native.CursorPosition;
+        _scale = Native.ScaleAt(pointer);
         bool hide = _isPointerOverIsland();
         _shown.Target = hide ? 0 : 1;
         bool busy = _shown.Advance(dt);
 
-        ChooseSide(pointer, scale, width, false);
-        Point spot = SpotNear(pointer, scale, width);
+        ChooseSide(pointer, width, false);
+        Point spot = SpotNear(pointer, width);
         _followX.Target = spot.X;
         _followY.Target = spot.Y;
         busy |= _followX.Advance(dt) | _followY.Advance(dt) | _side.Advance(dt);
 
         if (_leaving != null && now - _leaving.LeftAt >= LeaveSeconds)
         {
-            _stage.Remove(_leaving.Visual);
+            Discard(_leaving);
             _leaving = null;
+        }
+        if (_line == null && _leaving == null)
+        {
+            Native.Hide(_hwnd);
+            return false;
         }
         busy |= _leaving != null || (_line != null && IsAppearing(_line, now));
 
-        bool hidden = hide && _shown.Value < HiddenEnough;
-        if (!busy && !hidden)
-        {
-            _calmFor += dt;
-            if (_calmFor < CalmFrameSeconds) return true;
-        }
-        _calmFor = 0;
-
-        Place(scale);
-        Pose pose = PoseAt(now, new Vector(_followX.Velocity, _followY.Velocity) / scale);
+        Pose pose = PoseAt(now, new Vector(_followX.Velocity, _followY.Velocity) / _scale);
         if (_line != null) Arrange(_line, pose, now);
         if (_leaving != null) Arrange(_leaving, pose, now);
 
-        if (hidden && !busy)
-        {
-            if (_line != null) _hiddenPoll.Start();
-            return false;
-        }
-        return _line != null || _leaving != null;
+        if (!hide || _shown.Value >= HiddenEnough || busy) return true;
+        _hiddenPoll.Start();
+        return false;
     }
 
     void WakeIfRevealed()
     {
         if (_isPointerOverIsland()) return;
         _hiddenPoll.Stop();
-        SnapTo(Native.CursorPosition, TextWidth);
+        Point pointer = Native.CursorPosition;
+        _scale = Native.ScaleAt(pointer);
+        SnapTo(pointer, TextWidth);
         _loop.Start();
-    }
-
-    void Place(double scale)
-    {
-        int width = (int)Math.Round(RoomWidth * scale), height = (int)Math.Round(RoomHeight * scale);
-        (int X, int Y, int Width, int Height) at = ((int)Math.Round(_followX.Value - width / 2.0), (int)Math.Round(_followY.Value - height / 2.0), width, height);
-        if (at == _placed) return;
-        _placed = at;
-        Native.MoveAndSize(_source.Handle, at.X, at.Y, at.Width, at.Height);
     }
 
     Pose PoseAt(double now, Vector speed)
@@ -241,7 +220,8 @@ sealed class PointerLyric
         double roll = Math.Clamp(-speed.X * RollPerSpeed, -MaxRoll, MaxRoll);
         double depth = Math.Min(speed.Length * DepthPerSpeed, MaxSpeedDepth) + SwingDepth * (1 - side * side)
             + HiddenDepth * (1 - shown) + DriftDepth * Wave(now, DriftDepthSeconds);
-        return new Pose(side, Radians(yaw), Radians(pitch), Radians(roll), depth, DriftRise * Wave(now, DriftRiseSeconds), speed, shown);
+        var anchor = new Point(_followX.Value - _screen.X, _followY.Value - _screen.Y);
+        return new Pose(side, Radians(yaw), Radians(pitch), Radians(roll), depth, DriftRise * Wave(now, DriftRiseSeconds), speed, shown, _scale, anchor);
     }
 
     static void Arrange(Line line, Pose pose, double now)
@@ -251,6 +231,7 @@ sealed class PointerLyric
         double cosRoll = Math.Cos(pose.Roll), sinRoll = Math.Sin(pose.Roll);
         double gone = line.IsLeaving ? Math.Min((now - line.LeftAt) / LeaveSeconds, 1) : 0;
         double ripplePhase = 2 * Math.PI * now / RippleSeconds;
+        double resize = pose.Scale / line.Scale;
 
         foreach (Letter letter in line.Letters)
         {
@@ -258,8 +239,8 @@ sealed class PointerLyric
             double fromPointer = Math.Clamp((pose.Side * letter.X + line.Width / 2) / Math.Max(line.Width, 1), 0, 1);
             double ripple = 2 * Math.PI * letter.X / RippleLength - ripplePhase;
 
-            double x = letter.X, y = pose.Rise + RippleRise * Math.Sin(ripple * RippleRiseStretch);
-            double turnedX = x * cosYaw, turnedZ = x * sinYaw;
+            double y = pose.Rise + RippleRise * Math.Sin(ripple * RippleRiseStretch);
+            double turnedX = letter.X * cosYaw, turnedZ = letter.X * sinYaw;
             double tiltedY = y * cosPitch - turnedZ * sinPitch, tiltedZ = y * sinPitch + turnedZ * cosPitch;
             double depth = Math.Max(tiltedZ + RippleDepth * Math.Sin(ripple) + pose.Depth + EnterDepth * (1 - appeared) + LeaveDepth * gone * gone, NearestDepth);
             tiltedY += EnterRise * (1 - appeared) - LeaveRise * gone;
@@ -267,13 +248,16 @@ sealed class PointerLyric
             double near = FocalLength / (FocalLength + depth);
             Vector trail = -pose.Speed * TrailSeconds * Math.Pow(fromPointer, TrailCurve);
             if (trail.Length > MaxTrail) trail *= MaxTrail / trail.Length;
-            double flatX = turnedX * near + trail.X, flatY = tiltedY * near + trail.Y;
+            double flatX = (turnedX * near + trail.X) * pose.Scale, flatY = (tiltedY * near + trail.Y) * pose.Scale;
 
-            double scaleX = near * Math.Max(cosYaw, ThinnestLetter), scaleY = near * cosPitch;
-            letter.Place.Matrix = new Matrix(
-                scaleX * cosRoll, scaleX * sinRoll, -scaleY * sinRoll, scaleY * cosRoll,
-                RoomWidth / 2 + flatX * cosRoll - flatY * sinRoll, RoomHeight / 2 + flatX * sinRoll + flatY * cosRoll);
-            letter.Visual.Opacity = appeared * (1 - gone) * pose.Shown * Math.Clamp(1 - depth / DimDepth, 0, 1);
+            double scaleX = near * Math.Max(cosYaw, ThinnestLetter) * resize, scaleY = near * cosPitch * resize;
+            var place = new Matrix4x4(
+                (float)(scaleX * cosRoll), (float)(scaleX * sinRoll), 0, 0,
+                (float)(-scaleY * sinRoll), (float)(scaleY * cosRoll), 0, 0,
+                0, 0, 1, 0,
+                (float)(pose.Anchor.X + flatX * cosRoll - flatY * sinRoll), (float)(pose.Anchor.Y + flatX * sinRoll + flatY * cosRoll), 0, 1);
+            letter.Visual.TransformMatrix = Matrix4x4.CreateTranslation(-letter.Pivot.X, -letter.Pivot.Y, 0) * place;
+            letter.Visual.Opacity = (float)(appeared * (1 - gone) * pose.Shown * Math.Clamp(1 - depth / DimDepth, 0, 1));
         }
     }
 
@@ -283,36 +267,79 @@ sealed class PointerLyric
 
     static double Radians(double degrees) => degrees * Math.PI / 180;
 
-    Line Build(string text)
+    void Discard(Line line)
     {
-        double pixelsPerDip = Scale;
-        string shown = Fit(text, MaxTextWidth, pixelsPerDip);
-        FormattedText whole = Format(shown, pixelsPerDip);
-        double width = whole.WidthIncludingTrailingWhitespace, height = whole.Height;
-
-        var visual = new ContainerVisual();
-        (int Start, int Length)[] pieces = [.. Split(shown)];
-        double step = Math.Min(EnterStepSeconds, EnterSpreadSeconds / Math.Max(pieces.Length, 1)), start = Now;
-        Letter[] letters = [.. pieces.Select((piece, i) =>
-        {
-            int fromPointer = _sideTarget > 0 ? i : pieces.Length - 1 - i;
-            return CreateLetter(visual, whole, shown, piece, width, height, start + fromPointer * step, pixelsPerDip);
-        })];
-        _stage.Add(visual);
-        return new Line(text, visual, letters, width);
+        _root.Children.Remove(line.Visual);
+        foreach (Letter letter in line.Letters) letter.Visual.Dispose();
+        line.Visual.Dispose();
+        line.Surface.Dispose();
     }
 
-    Letter CreateLetter(ContainerVisual line, FormattedText whole, string text, (int Start, int Length) piece,
-        double lineWidth, double lineHeight, double appearAt, double pixelsPerDip)
+    Line Build(string text)
     {
-        Rect box = whole.BuildHighlightGeometry(new Point(), piece.Start, piece.Length)?.Bounds ?? new Rect();
-        var place = new MatrixTransform(new Matrix(1, 0, 0, 1, -RoomWidth, -RoomHeight));
-        var visual = new DrawingVisual { Transform = place, Opacity = 0 };
-        TextOptions.SetTextHintingMode(visual, TextHintingMode.Animated);
-        using (DrawingContext dc = visual.RenderOpen())
-            dc.DrawText(Format(text.Substring(piece.Start, piece.Length), pixelsPerDip), new Point(-box.Width / 2, -lineHeight / 2));
-        line.Children.Add(visual);
-        return new Letter(visual, place, box.Left + box.Width / 2 - lineWidth / 2, appearAt);
+        double scale = _scale;
+        string shown = Fit(text, MaxTextWidth, scale);
+        FormattedText whole = Format(shown, scale);
+        double width = whole.WidthIncludingTrailingWhitespace, height = whole.Height;
+
+        BitmapSource print = Print(whole, width, height, scale);
+        CompositionDrawingSurface surface = _surfaces.Create(print);
+        ContainerVisual visual = _compositor.CreateContainerVisual();
+        _root.Children.InsertAtTop(visual);
+
+        Rect[] boxes = [.. Split(shown)
+            .Select(piece => whole.BuildHighlightGeometry(new Point(), piece.Start, piece.Length)?.Bounds ?? Rect.Empty)
+            .Where(box => !box.IsEmpty)];
+        int[] edges = [0, .. boxes.Skip(1).Select((box, i) => PrintPixel((boxes[i].Right + box.Left) / 2, scale)), print.PixelWidth];
+        double step = Math.Min(EnterStepSeconds, EnterSpreadSeconds / Math.Max(boxes.Length, 1)), start = Now;
+        float pivotY = (float)((PrintMargin + height / 2) * scale);
+
+        Letter[] letters = [.. boxes.Select((box, i) =>
+        {
+            double middle = box.Left + box.Width / 2;
+            int fromPointer = _sideTarget > 0 ? i : boxes.Length - 1 - i;
+            SpriteVisual sprite = CreateSprite(surface, edges[i], edges[i + 1], print.PixelHeight);
+            visual.Children.InsertAtTop(sprite);
+            var pivot = new Vector2(PrintPixel(middle, scale) - edges[i], pivotY);
+            return new Letter(sprite, pivot, middle - width / 2, start + fromPointer * step);
+        })];
+        return new Line(text, visual, surface, letters, width, scale);
+    }
+
+    static int PrintPixel(double x, double scale) => (int)Math.Round((x + PrintMargin) * scale);
+
+    SpriteVisual CreateSprite(CompositionDrawingSurface surface, int left, int right, int height)
+    {
+        CompositionSurfaceBrush brush = _compositor.CreateSurfaceBrush(surface);
+        brush.Stretch = CompositionStretch.None;
+        brush.HorizontalAlignmentRatio = 0;
+        brush.VerticalAlignmentRatio = 0;
+        brush.Offset = new Vector2(-left, 0);
+        SpriteVisual sprite = _compositor.CreateSpriteVisual();
+        sprite.Brush = brush;
+        sprite.Size = new Vector2(right - left, height);
+        sprite.Opacity = 0;
+        return sprite;
+    }
+
+    static BitmapSource Print(FormattedText text, double width, double height, double scale)
+    {
+        var words = new DrawingVisual
+        {
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = ShadowBlur, ShadowDepth = ShadowDrop, Direction = ShadowDown, Opacity = ShadowOpacity, Color = Colors.Black,
+            },
+        };
+        TextOptions.SetTextRenderingMode(words, TextRenderingMode.Grayscale);
+        using (DrawingContext dc = words.RenderOpen()) dc.DrawText(text, new Point(PrintMargin, PrintMargin));
+        var holder = new System.Windows.Media.ContainerVisual();
+        holder.Children.Add(words);
+
+        var print = new RenderTargetBitmap((int)Math.Ceiling((width + 2 * PrintMargin) * scale), (int)Math.Ceiling((height + 2 * PrintMargin) * scale),
+            PrintDpi * scale, PrintDpi * scale, PixelFormats.Pbgra32);
+        print.Render(holder);
+        return print;
     }
 
     static IEnumerable<(int Start, int Length)> Split(string text)

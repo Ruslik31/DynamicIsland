@@ -6,6 +6,7 @@ namespace DynamicIsland;
 public partial class MainWindow
 {
     PointerLyric? _pointerLyric;
+    bool _pointerLyricBroken;
 
     void PointerLyric_Click(object sender, RoutedEventArgs e)
     {
@@ -17,11 +18,20 @@ public partial class MainWindow
     void UpdatePointerLyric()
     {
         string text = PointerLyricText();
-        if (text.Length == 0 && _pointerLyric == null) return;
+        if ((text.Length == 0 && _pointerLyric == null) || _pointerLyricBroken) return;
 
         if (_pointerLyric == null)
         {
-            _pointerLyric = new PointerLyric((FontFamily)FindResource("Display"), () => _hovered);
+            try
+            {
+                _pointerLyric = new PointerLyric((FontFamily)FindResource("Display"), () => _hovered);
+            }
+            catch (Exception ex)
+            {
+                App.Log(ex);
+                _pointerLyricBroken = true;
+                return;
+            }
             StayOnTop();
         }
         _pointerLyric.ShowLine(text);
@@ -29,9 +39,9 @@ public partial class MainWindow
 
     void StayOnTop()
     {
-        if (_pointerLyric != null) Native.KeepOnTop(_pointerLyric.Handle);
         Native.KeepOnTop(_hwnd);
         _glass.Place();
+        if (_pointerLyric != null) Native.PutBehind(_pointerLyric.Handle, _glass.IsOn ? _glass.Handle : _hwnd);
     }
 
     string PointerLyricText()
