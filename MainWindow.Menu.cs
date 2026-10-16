@@ -74,6 +74,13 @@ public partial class MainWindow
         _playerLines = [];
     }
 
+    void LyricParting_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.LyricParting = !Settings.LyricParting;
+        UpdateSwitches(true);
+        StirLyrics();
+    }
+
     void Rim_Click(object sender, RoutedEventArgs e)
     {
         Settings.Rim = !Settings.Rim;
@@ -105,6 +112,7 @@ public partial class MainWindow
         LyricsSwitch.Set(Settings.Lyrics, animate);
         LyricEffectsSwitch.Set(Settings.LyricEffects, animate);
         PointerLyricSwitch.Set(Settings.PointerLyric, animate);
+        LyricPartingSwitch.Set(Settings.LyricParting, animate);
         RimSwitch.Set(Settings.Rim, animate);
         AppVolumeSwitch.Set(Settings.AppVolume, animate);
         NetworkSwitch.Set(Settings.Network, animate);

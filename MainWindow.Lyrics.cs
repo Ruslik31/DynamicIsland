@@ -238,7 +238,8 @@ public partial class MainWindow
 
     bool AdvanceLyricParting(double dt)
     {
-        bool overPlayer = _hovered && _view == View.MediaBig, overCompact = _hovered && _view == View.Media;
+        bool parting = _hovered && Settings.LyricParting;
+        bool overPlayer = parting && _view == View.MediaBig, overCompact = parting && _view == View.Media;
         bool moving = overPlayer && _playerScrolling;
         int sung = Math.Max(_playerIndex, 0);
         for (int i = 0; i < _playerRows.Length; i++)
