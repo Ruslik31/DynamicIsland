@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace DynamicIsland;
 
@@ -16,7 +17,8 @@ static class Native
     const long WS_EX_NOACTIVATE = 0x08000000;
     const long WS_EX_TRANSPARENT = 0x00000020, WS_EX_LAYERED = 0x00080000, WS_EX_TOPMOST = 0x00000008;
     const long WS_EX_NOREDIRECTIONBITMAP = 0x00200000;
-    const long WS_POPUP = 0x80000000;
+    const long WS_POPUP = 0x80000000, WS_VISIBLE = 0x10000000;
+    const int WM_NCHITTEST = 0x0084, HTTRANSPARENT = -1;
     const uint LWA_ALPHA = 2;
     const int SW_SHOWNOACTIVATE = 4;
     const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010;
@@ -121,10 +123,18 @@ static class Native
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
 
-    public static void LetClicksThrough(IntPtr hwnd)
+    public static HwndSourceParameters PassThroughOverlay(string name, int width, int height) => new(name, width, height)
     {
-        long style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+        WindowStyle = unchecked((int)(WS_POPUP | WS_VISIBLE)),
+        ExtendedWindowStyle = (int)(WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST),
+        UsesPerPixelOpacity = true,
+    };
+
+    public static IntPtr PassHitsThrough(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (message != WM_NCHITTEST) return IntPtr.Zero;
+        handled = true;
+        return new IntPtr(HTTRANSPARENT);
     }
 
     public static Rect WorkAreaAt(Point point)
@@ -136,8 +146,8 @@ static class Native
         return new Rect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top);
     }
 
-    public static void MoveTo(IntPtr hwnd, int x, int y) =>
-        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    public static void MoveAndSize(IntPtr hwnd, int x, int y, int width, int height) =>
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE);
 
     public static IntPtr CreateBackdropWindow()
     {

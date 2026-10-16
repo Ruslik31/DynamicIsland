@@ -346,8 +346,7 @@ public partial class MainWindow : Window
             UpdateClock();
             PollPower();
             _ = _weather.RefreshAsync();
-            Native.KeepOnTop(_hwnd);
-            _glass.Place();
+            StayOnTop();
             if (_media.IsPlaying) _lastPlayedAt = DateTime.UtcNow;
             UpdateView();
         }

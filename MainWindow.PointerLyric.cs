@@ -19,8 +19,19 @@ public partial class MainWindow
         string text = PointerLyricText();
         if (text.Length == 0 && _pointerLyric == null) return;
 
-        _pointerLyric ??= new PointerLyric((FontFamily)FindResource("Display"));
+        if (_pointerLyric == null)
+        {
+            _pointerLyric = new PointerLyric((FontFamily)FindResource("Display"), () => _hovered);
+            StayOnTop();
+        }
         _pointerLyric.ShowLine(text);
+    }
+
+    void StayOnTop()
+    {
+        if (_pointerLyric != null) Native.KeepOnTop(_pointerLyric.Handle);
+        Native.KeepOnTop(_hwnd);
+        _glass.Place();
     }
 
     string PointerLyricText()
