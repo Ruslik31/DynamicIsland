@@ -104,6 +104,7 @@ public partial class MainWindow
     {
         LyricsSwitch.Set(Settings.Lyrics, animate);
         LyricEffectsSwitch.Set(Settings.LyricEffects, animate);
+        PointerLyricSwitch.Set(Settings.PointerLyric, animate);
         RimSwitch.Set(Settings.Rim, animate);
         AppVolumeSwitch.Set(Settings.AppVolume, animate);
         NetworkSwitch.Set(Settings.Network, animate);

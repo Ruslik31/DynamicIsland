@@ -856,7 +856,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="SettingsView" Width="320" Height="454" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="SettingsView" Width="320" Height="494" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="НАСТРОЙКИ" Click="SettingsBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="Lyrics_Click">
@@ -881,6 +881,13 @@
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Sparkle"/>
                                 <TextBlock Style="{StaticResource RowLabel}" Text="Эффекты текста"/>
                                 <local:Toggle x:Name="LyricEffectsSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="PointerLyric_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Pointer"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Текст у курсора"/>
+                                <local:Toggle x:Name="PointerLyricSwitch" Style="{StaticResource RowSwitch}"/>
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource RowButton}" Click="Rim_Click">

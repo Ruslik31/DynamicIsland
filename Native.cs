@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
 
 namespace DynamicIsland;
 
@@ -18,7 +19,7 @@ static class Native
     const long WS_POPUP = 0x80000000;
     const uint LWA_ALPHA = 2;
     const int SW_SHOWNOACTIVATE = 4;
-    const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+    const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010;
     const uint MONITOR_DEFAULTTONEAREST = 2;
     const uint MONITORINFOF_PRIMARY = 1;
     const int VK_CONTROL = 0x11;
@@ -33,6 +34,9 @@ static class Native
 
     [StructLayout(LayoutKind.Sequential)]
     struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct POINT { public int X, Y; }
 
     [StructLayout(LayoutKind.Sequential)]
     struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public uint dwFlags; }
@@ -74,8 +78,10 @@ static class Native
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern IntPtr GetDesktopWindow();
     [DllImport("user32.dll")] static extern IntPtr GetShellWindow();
+    [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT point);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+    [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(POINT point, uint flags);
     [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -100,6 +106,8 @@ static class Native
 
     public static void BringForward(IntPtr hwnd) => SetForegroundWindow(hwnd);
 
+    public static Point CursorPosition => GetCursorPos(out POINT at) ? new Point(at.X, at.Y) : default;
+
     public static bool IsCtrlDown => GetAsyncKeyState(VK_CONTROL) < 0;
 
     public static bool RegisterShellHook(IntPtr hwnd) => RegisterShellHookWindow(hwnd);
@@ -112,6 +120,24 @@ static class Native
         long style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
+
+    public static void LetClicksThrough(IntPtr hwnd)
+    {
+        long style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+        SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
+    }
+
+    public static Rect WorkAreaAt(Point point)
+    {
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        IntPtr monitor = MonitorFromPoint(new POINT { X = (int)point.X, Y = (int)point.Y }, MONITOR_DEFAULTTONEAREST);
+        if (!GetMonitorInfo(monitor, ref info)) return Rect.Empty;
+        RECT work = info.rcWork;
+        return new Rect(work.Left, work.Top, work.Right - work.Left, work.Bottom - work.Top);
+    }
+
+    public static void MoveTo(IntPtr hwnd, int x, int y) =>
+        SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
     public static IntPtr CreateBackdropWindow()
     {

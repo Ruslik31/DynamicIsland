@@ -37,7 +37,7 @@ public partial class MainWindow : Window
         [View.RecordBig] = new(340, 92, 40),
         [View.RecordSet] = new(320, 92, 40),
         [View.Menu] = new(300, 368, 34),
-        [View.Settings] = new(320, 454, 34),
+        [View.Settings] = new(320, 494, 34),
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
         [View.Weather] = new(340, 190, 34),
@@ -156,6 +156,7 @@ public partial class MainWindow : Window
         _glass = new Glass(this);
         _eqLoop = new FrameLoop(AdvanceEq, EqFrameSeconds);
         _seekLoop = new FrameLoop(AdvanceSeek);
+        _partLoop = new FrameLoop(AdvanceLyricParting);
         _transientTimeout = new DelayedAction(EndTransient);
         _collapseTimeout = new DelayedAction(Collapse);
         _awayTimeout = new DelayedAction(ReturnFromAway);
@@ -305,6 +306,7 @@ public partial class MainWindow : Window
     {
         _ticker.Stop();
         _alarm.Stop();
+        _pointerLyric?.ShowLine("");
         _glass.Hide();
         var fade = new DoubleAnimation(0, Ms(220));
         fade.Completed += (_, _) => Application.Current.Shutdown();
@@ -331,6 +333,7 @@ public partial class MainWindow : Window
         PollVolume();
         if (_ticks % HeadsetReadTicks == 1) ReadHeadset(_audio.Device);
         UpdateLyric();
+        UpdatePointerLyric();
         UpdateTimer();
         UpdateRecord();
         if (_ticks % FullscreenCheckTicks == 0)

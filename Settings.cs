@@ -57,6 +57,7 @@ static class Settings
     static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen));
     static bool _rim = ReadSwitch(nameof(Rim)), _appVolume = ReadSwitch(nameof(AppVolume));
     static bool _weather = ReadSwitch(nameof(Weather));
+    static bool _pointerLyric = ReadSwitch(nameof(PointerLyric), false);
     static Place? _place = ReadPlace();
     static bool _dots = ReadSwitch(nameof(Dots), false);
     static bool _lineBar = ReadSwitch(nameof(LineBar));
@@ -128,6 +129,12 @@ static class Settings
     {
         get => _lyricEffects;
         set => Write(nameof(LyricEffects), _lyricEffects = value);
+    }
+
+    public static bool PointerLyric
+    {
+        get => _pointerLyric;
+        set => Write(nameof(PointerLyric), _pointerLyric = value);
     }
 
     public static bool Rim
