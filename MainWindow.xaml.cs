@@ -306,7 +306,7 @@ public partial class MainWindow : Window
     {
         _ticker.Stop();
         _alarm.Stop();
-        _pointerLyric?.ShowLine("");
+        _pointerLyric?.ShowLine("", 0, 0);
         _glass.Hide();
         var fade = new DoubleAnimation(0, Ms(220));
         fade.Completed += (_, _) => Application.Current.Shutdown();

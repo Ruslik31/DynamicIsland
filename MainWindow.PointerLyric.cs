@@ -17,7 +17,7 @@ public partial class MainWindow
 
     void UpdatePointerLyric()
     {
-        string text = PointerLyricText();
+        (string text, double sung, double seconds) = PointerLyricLine();
         if ((text.Length == 0 && _pointerLyric == null) || _pointerLyricBroken) return;
 
         if (_pointerLyric == null)
@@ -34,7 +34,7 @@ public partial class MainWindow
             }
             StayOnTop();
         }
-        _pointerLyric.ShowLine(text);
+        _pointerLyric.ShowLine(text, sung, seconds);
     }
 
     void StayOnTop()
@@ -44,13 +44,18 @@ public partial class MainWindow
         if (_pointerLyric != null) Native.PutBehind(_pointerLyric.Handle, _glass.IsOn ? _glass.Handle : _hwnd);
     }
 
-    string PointerLyricText()
+    (string Text, double Sung, double Seconds) PointerLyricLine()
     {
-        if (!Settings.PointerLyric || !Settings.Lyrics || !_media.IsPlaying || _hiddenByFullscreen) return "";
+        if (!Settings.PointerLyric || !Settings.Lyrics || !_media.IsPlaying || _hiddenByFullscreen) return ("", 0, 0);
 
         LyricsService.Line[] lines = _lyrics.LinesFor(_media.Duration);
-        int index = LineAt(lines, LyricTime);
+        TimeSpan at = LyricTime;
+        int index = LineAt(lines, at);
         string text = index < 0 ? "" : lines[index].Text.Trim();
-        return Lyric.IsWordless(text) ? "" : text;
+        if (Lyric.IsWordless(text)) return ("", 0, 0);
+
+        TimeSpan start = lines[index].Time, end = index + 1 < lines.Length ? lines[index + 1].Time : _media.Duration;
+        double seconds = Math.Clamp((end - start).TotalSeconds, MinLineFillSeconds, MaxLineFillSeconds);
+        return (text, (at - start).TotalSeconds, seconds);
     }
 }

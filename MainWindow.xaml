@@ -1085,6 +1085,13 @@
                                 <local:Segments x:Name="SeekHoverSegments" Style="{StaticResource RowSegments}" Labels="Лупа|Строка|Волна"/>
                             </Grid>
                         </Button>
+                        <Button Style="{StaticResource RowButton}" Click="PointerLyricShape_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="PointerText"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Текст у курсора"/>
+                                <local:Segments x:Name="PointerLyricShapeSegments" Style="{StaticResource RowSegments}" Labels="Столбик|Строка"/>
+                            </Grid>
+                        </Button>
                         <Button Style="{StaticResource RowButton}" Click="BackdropRow_Click">
                             <Grid>
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Stars"/>
