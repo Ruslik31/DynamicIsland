@@ -10,7 +10,8 @@ public partial class MainWindow
 {
     const double UpdatePagePadding = 14;
     const int MegabyteShift = 20;
-    const double LookHeight = 528, LookTilesHeight = 72;
+    const double LookHeight = 430, LookTilesHeight = 72, LookWheelStep = 80;
+    const double LookEdgeZone = 70, LookEdgeScale = 0.8;
     const int LargestScale = 130, ScaleStep = 5;
     const int LargestGap = 24, GapStep = 2;
 
@@ -19,6 +20,7 @@ public partial class MainWindow
     static readonly string[] SourceNames = ["LRCLIB", "Deezer", "NetEase", "QQ Music", "Kugou", "Paxsenix"];
 
     Border? _openLookTiles;
+    readonly Spring _lookScroll = new(0, 260, 30);
 
     void SettingsRow_Click(object sender, RoutedEventArgs e) => ShowPanelAndCheckUpdate(Panel.Settings);
 
@@ -26,7 +28,11 @@ public partial class MainWindow
 
     void UpdateBack_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Settings);
 
-    void LookRow_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Look);
+    void LookRow_Click(object sender, RoutedEventArgs e)
+    {
+        _lookScroll.Snap(0);
+        ShowPanel(Panel.Look);
+    }
 
     void SettingsBack_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Menu);
 
@@ -290,10 +296,52 @@ public partial class MainWindow
         chevron.RenderTransform.BeginAnimation(RotateTransform.AngleProperty, new DoubleAnimation(open ? 90 : 0, Ms(240)) { EasingFunction = ease });
     }
 
-    void LookTiles_SizeChanged(object sender, SizeChangedEventArgs e)
+    double LookOverflow => Math.Max(LookRows.ActualHeight + LookRows.Margin.Top + LookRows.Margin.Bottom - LookView.Height, 0);
+
+    void LookRows_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        LookView.Height = LookHeight + BackdropTiles.ActualHeight + LyricChangeTiles.ActualHeight + HoverTiles.ActualHeight;
-        if (_view == View.Look) UpdateTargets();
+        double reveal = _openLookTiles == null ? 0
+            : _openLookTiles.TranslatePoint(new Point(0, _openLookTiles.ActualHeight), LookRows).Y + LookRows.Margin.Top + LookRows.Margin.Bottom - LookView.Height;
+        _lookScroll.Target = Math.Clamp(Math.Max(_lookScroll.Target, reveal), 0, LookOverflow);
+        StartShapeLoop();
+    }
+
+    void ScrollLook(int notches)
+    {
+        _lookScroll.Target = Math.Clamp(_lookScroll.Target + notches * LookWheelStep, 0, LookOverflow);
+        StartShapeLoop();
+    }
+
+    void ShrinkLookEdges(double scrolled)
+    {
+        double top = Math.Clamp(scrolled / LookEdgeZone, 0, 1), bottom = Math.Clamp((LookOverflow - scrolled) / LookEdgeZone, 0, 1);
+        foreach (FrameworkElement row in LookRows.Children)
+        {
+            double middle = VisualTreeHelper.GetOffset(row).Y + LookRows.Margin.Top + row.ActualHeight / 2 - scrolled;
+            double fromTop = Math.Clamp(middle / LookEdgeZone, 0, 1), fromBottom = Math.Clamp((LookView.Height - middle) / LookEdgeZone, 0, 1);
+            double shrink = Math.Max(top * Smooth(1 - fromTop), bottom * Smooth(1 - fromBottom));
+
+            if (row.RenderTransform is not ScaleTransform size)
+            {
+                row.RenderTransform = size = new ScaleTransform();
+                row.RenderTransformOrigin = new Point(0.5, 0.5);
+            }
+            size.ScaleX = size.ScaleY = 1 - (1 - LookEdgeScale) * shrink;
+        }
+    }
+
+    static double Smooth(double t) => t * t * (3 - 2 * t);
+
+    void ApplyLookScroll()
+    {
+        double scrolled = _lookScroll.Value;
+        LookEdgeTop.Color = EdgeFade(scrolled);
+        LookEdgeBottom.Color = EdgeFade(LookOverflow - scrolled);
+        if (LookView.IsVisible) ShrinkLookEdges(scrolled);
+        if (LookMove.Y == -scrolled) return;
+
+        LookMove.Y = -scrolled;
+        if (_view == View.Look) LookRows.FollowPointer();
     }
 
     void Accent_Click(object sender, RoutedEventArgs e)
