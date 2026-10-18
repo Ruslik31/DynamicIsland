@@ -71,7 +71,7 @@ public partial class MainWindow
     {
         Settings.LyricEffects = !Settings.LyricEffects;
         UpdateSwitches(true);
-        _playerLines = [];
+        RebuildPlayerLyrics();
     }
 
     void LyricParting_Click(object sender, RoutedEventArgs e)

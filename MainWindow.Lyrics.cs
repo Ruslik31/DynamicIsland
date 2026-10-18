@@ -273,6 +273,13 @@ public partial class MainWindow
         PlayerLyricWait.BeginAnimation(OpacityProperty, fade);
     }
 
+    void RebuildPlayerLyrics()
+    {
+        _playerIndex = -1;
+        BuildPlayerLyrics(_playerLines);
+        if (_view == View.MediaBig) UpdatePlayerLyrics(true);
+    }
+
     void BuildPlayerLyrics(LyricsService.Line[] lines)
     {
         PlayerLyricLines.Children.Clear();
