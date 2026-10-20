@@ -34,7 +34,16 @@ public partial class MainWindow
             }
             StayOnTop();
         }
-        _pointerLyric.ShowLine(text, sung, seconds);
+        try
+        {
+            _pointerLyric.ShowLine(text, sung, seconds);
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+            _pointerLyricBroken = true;
+            _pointerLyric.ShowLine("", 0, 0);
+        }
     }
 
     void StayOnTop()

@@ -221,6 +221,7 @@ sealed class PointerLyric
     bool Advance(double dt)
     {
         double now = Now, width = TextWidth;
+        CoverScreen();
         Point pointer = Native.CursorPosition;
         _scale = Native.ScaleAt(pointer);
         bool hide = _isPointerOverIsland();

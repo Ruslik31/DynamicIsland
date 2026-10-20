@@ -82,6 +82,20 @@ sealed class DrawingSurfaces : IDisposable
 
         CompositionDrawingSurface surface = _graphics.CreateDrawingSurface(new Windows.Foundation.Size(width, height),
             DirectXPixelFormat.B8G8R8A8UIntNormalized, DirectXAlphaMode.Premultiplied);
+        try
+        {
+            Fill(surface, pixels, width, height, stride);
+        }
+        catch
+        {
+            surface.Dispose();
+            throw;
+        }
+        return surface;
+    }
+
+    void Fill(CompositionDrawingSurface surface, byte[] pixels, int width, int height, int stride)
+    {
         var drawing = surface.As<ICompositionDrawingSurfaceInterop>();
         Guid id = Texture2DId;
         drawing.BeginDraw(IntPtr.Zero, ref id, out IntPtr texture, out Offset offset);
@@ -101,7 +115,6 @@ sealed class DrawingSurfaces : IDisposable
             Marshal.Release(texture);
             drawing.EndDraw();
         }
-        return surface;
     }
 
     public void Dispose()
