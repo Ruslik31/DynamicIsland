@@ -13,7 +13,7 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics, Loading }
+    enum View { Idle, Media, Timer, Record, Volume, Charge, Headset, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics, Loading }
 
     enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics }
 
@@ -27,6 +27,7 @@ public partial class MainWindow : Window
         [View.Record] = new(132, 34, 17),
         [View.Volume] = new(250, 34, 17),
         [View.Charge] = new(230, 34, 17),
+        [View.Headset] = new(340, 96, 41),
         [View.Focus] = new(236, 34, 17),
         [View.Toast] = new(340, 68, 30),
         [View.Notice] = new(320, 64, 29),
@@ -91,6 +92,7 @@ public partial class MainWindow : Window
     readonly DelayedAction _transientTimeout, _collapseTimeout, _awayTimeout;
     readonly View? _forcedView;
     readonly double _forcedTimerSeconds;
+    readonly int _forcedHeadsetCharge;
 
     View _view = View.Idle;
     View? _transientView;
@@ -119,6 +121,7 @@ public partial class MainWindow : Window
             [View.Record] = RecordView,
             [View.Volume] = VolumeView,
             [View.Charge] = ChargeView,
+            [View.Headset] = HeadsetView,
             [View.Focus] = FocusView,
             [View.Toast] = ToastView,
             [View.Notice] = NoticeView,
@@ -151,6 +154,7 @@ public partial class MainWindow : Window
 
         _forcedView = Enum.TryParse(Argument("--view"), true, out View forced) ? forced : null;
         _forcedTimerSeconds = double.TryParse(Argument("--timer"), NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds) ? seconds : 0;
+        _forcedHeadsetCharge = int.TryParse(Argument("--headset"), out int charge) ? Math.Clamp(charge, 0, 100) : Headset.Unknown;
 
         _shapeLoop = new FrameLoop(AdvanceShape);
         _glass = new Glass(this);
@@ -278,6 +282,9 @@ public partial class MainWindow : Window
         _ticker.Start();
         if (_forcedTimerSeconds > 0) StartTimer(TimeSpan.FromSeconds(_forcedTimerSeconds));
         if (_forcedView == View.Update) _ = _updater.CheckAsync();
+        if (_forcedHeadsetCharge >= 0)
+            ShowHeadset("AirPods Pro", Enum.TryParse(Argument("--gadget"), true, out Gadget.Model model) ? model : Gadget.Model.Earbuds,
+                _forcedHeadsetCharge, _forcedHeadsetCharge <= HeadsetLowPercent);
 
         try { await _media.StartAsync(); }
         catch (Exception ex) { App.Log(ex); }
