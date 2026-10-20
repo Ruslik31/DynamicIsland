@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using static DynamicIsland.Motion;
@@ -15,9 +16,7 @@ public partial class MainWindow
     const int LargestScale = 130, ScaleStep = 5;
     const int LargestGap = 24, GapStep = 2;
 
-    const int FirstSourceRow = 1;
-
-    static readonly string[] SourceNames = ["LRCLIB", "Deezer", "NetEase", "QQ Music", "Kugou", "Paxsenix"];
+    const int PointerLyricOff = 0, FirstPointerLyricShape = 1;
 
     Border? _openLookTiles;
     readonly Spring _lookScroll = new(0, 260, 30);
@@ -58,19 +57,20 @@ public partial class MainWindow
         TrackLyrics();
     }
 
-    void SourcesRow_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Sources);
+    void LyricsRow_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Lyrics);
 
-    void SourcesBack_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Settings);
+    void LyricsBack_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Settings);
 
     void Source_Click(object sender, RoutedEventArgs e)
     {
-        var picked = (LyricSource)(1 << SourceRows.Children.IndexOf((UIElement)sender) - FirstSourceRow);
+        var picked = (LyricSource)(1 << SourceChips.Children.IndexOf((UIElement)sender));
         LyricSource left = Settings.LyricSources ^ picked;
-        if (left == 0) return;
-
-        Settings.LyricSources = left;
+        if (left != 0)
+        {
+            Settings.LyricSources = left;
+            TrackLyrics();
+        }
         UpdateSwitches(true);
-        TrackLyrics();
     }
 
     void LyricEffects_Click(object sender, RoutedEventArgs e)
@@ -115,9 +115,10 @@ public partial class MainWindow
 
     void UpdateSwitches(bool animate)
     {
+        LyricsState.Text = Settings.Lyrics ? "Вкл" : "Выкл";
         LyricsSwitch.Set(Settings.Lyrics, animate);
         LyricEffectsSwitch.Set(Settings.LyricEffects, animate);
-        PointerLyricSwitch.Set(Settings.PointerLyric, animate);
+        PointerLyricSegments.Set(Settings.PointerLyric ? FirstPointerLyricShape + (int)Settings.PointerLyricShape : PointerLyricOff, animate);
         LyricPartingSwitch.Set(Settings.LyricParting, animate);
         RimSwitch.Set(Settings.Rim, animate);
         AppVolumeSwitch.Set(Settings.AppVolume, animate);
@@ -126,10 +127,8 @@ public partial class MainWindow
         FullscreenSwitch.Set(Settings.HideFullscreen, animate);
         AutostartSwitch.Set(Autostart.Enabled, animate);
 
-        Toggle[] sources = [LrclibSwitch, DeezerSwitch, NetEaseSwitch, QqMusicSwitch, KugouSwitch, PaxsenixSwitch];
-        string[] chosen = SourceNames.Where((_, i) => Settings.LyricSources.HasFlag((LyricSource)(1 << i))).ToArray();
-        for (int i = 0; i < sources.Length; i++) sources[i].Set(Settings.LyricSources.HasFlag((LyricSource)(1 << i)), animate);
-        SourcesText.Text = chosen.Length == sources.Length ? "Все" : chosen.Length == 1 ? chosen[0] : $"{chosen.Length} из {sources.Length}";
+        for (int i = 0; i < SourceChips.Children.Count; i++)
+            ((ToggleButton)SourceChips.Children[i]).IsChecked = Settings.LyricSources.HasFlag((LyricSource)(1 << i));
     }
 
     async void Update_Click(object sender, RoutedEventArgs e)
@@ -237,13 +236,6 @@ public partial class MainWindow
     {
         Settings.SeekHover = (SeekHover)SeekHoverSegments.PickUnderPointer();
         RefreshLookPage();
-    }
-
-    void PointerLyricShape_Click(object sender, RoutedEventArgs e)
-    {
-        Settings.PointerLyricShape = (PointerLyricShape)PointerLyricShapeSegments.PickUnderPointer();
-        RefreshLookPage();
-        _pointerLyric?.Reshape();
     }
 
     void BackdropRow_Click(object sender, RoutedEventArgs e) => ToggleLookTiles(BackdropTiles);
@@ -361,7 +353,6 @@ public partial class MainWindow
         DotsSegments.Set(Settings.Dots ? 1 : 0, LookView.IsVisible);
         SeekStyleSegments.Set(Settings.LineBar ? 1 : 0, LookView.IsVisible);
         SeekHoverSegments.Set((int)Settings.SeekHover, LookView.IsVisible);
-        PointerLyricShapeSegments.Set((int)Settings.PointerLyricShape, LookView.IsVisible);
         GlassSwitch.Set(Settings.Glass, LookView.IsVisible);
         ((RadioButton)BackdropStrip.Children[(int)Settings.Backdrop]).IsChecked = true;
         ((RadioButton)LyricChangeStrip.Children[(int)Settings.LyricChange]).IsChecked = true;

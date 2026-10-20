@@ -10,8 +10,11 @@ public partial class MainWindow
 
     void PointerLyric_Click(object sender, RoutedEventArgs e)
     {
-        Settings.PointerLyric = !Settings.PointerLyric;
+        int picked = PointerLyricSegments.PickUnderPointer();
+        Settings.PointerLyric = picked != PointerLyricOff;
+        if (Settings.PointerLyric) Settings.PointerLyricShape = (PointerLyricShape)(picked - FirstPointerLyricShape);
         UpdateSwitches(true);
+        _pointerLyric?.Reshape();
         UpdatePointerLyric();
     }
 
