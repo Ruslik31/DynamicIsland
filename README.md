@@ -180,6 +180,22 @@ git push origin v1.1.0
 
 Остров рисуется шрифтом SF Pro: файлы лежат в [Fonts](Fonts/) и встраиваются в exe при сборке. Шрифт принадлежит Apple и распространяется на условиях её лицензии. Без этих файлов используется Segoe UI.
 
+### Модели наушников
+
+Наушники и колонка над капсулой заряда — кадры поворота готовых 3D-моделей с [Sketchfab](https://sketchfab.com), отрендеренные в Blender: по 81 кадру через 2° в [Gadgets](Gadgets/), они тоже встраиваются в exe. Модели распространяются по лицензии [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/):
+
+- вкладыши — [«AirPods (3ᵉ génération)»](https://sketchfab.com/3d-models/airpods-3e-generation-ed331e742ab944e683dcddd59ab0713e), автор [polyman](https://sketchfab.com/Polyman_3D); кейс убран;
+- накладные — [«Airpods max sky blue»](https://sketchfab.com/3d-models/airpods-max-sky-blue-3d0643db08fc4ef89bda55a74077ece4), автор [polyman](https://sketchfab.com/ely.haddad); перекрашены в серебро;
+- колонка — [«JBL Charge 3 speaker»](https://sketchfab.com/3d-models/jbl-charge-3-speaker-661f85fe3e4048f59785b2a75ffa52f8), автор [Aleksei Rozumnyi](https://sketchfab.com/Aleksei.Rozumnyi).
+
+Чтобы перерендерить кадры, скачайте модель в glTF, распакуйте и запустите Blender 5 (кадры сделаны в 5.2):
+
+```bash
+blender --background --factory-startup --python Gadgets/render.py -- путь/к/scene.gltf earbuds Gadgets/Earbuds.png
+```
+
+Вместо `earbuds` — `headphones` или `speaker`; поза покоя, свет и экспозиция каждой модели заданы в начале скрипта.
+
 ## Отладка
 
 ```bash
@@ -224,7 +240,7 @@ DynamicIsland.exe --headset 70 --view Headset
 | `AudioService.cs`, `CoreAudio.cs` | Громкость — общая и отдельного приложения — и смена устройства вывода; объявления интерфейсов Core Audio |
 | `Headset.cs` | Заряд Bluetooth-наушников |
 | `ChargeGlow.cs` | Капсула заряда: кольцо, стеклянная полоса и размытый свет до уровня заряда |
-| `Gadget.cs`, `Meshes.cs` | Объёмные наушники и колонка на `Viewport3D` |
+| `Gadget.cs` | Наушники и колонка над капсулой заряда: кадр поворота по углу из листов в `Gadgets`, соседний подмешивается для плавности |
 | `NetworkService.cs` | Состояние сети и VPN |
 | `MainWindow.Record.cs`, `ObsService.cs` | Запись OBS в острове и пузыре; связь с OBS по WebSocket: подключение с паролем из настроек OBS, состояние записи, сцена, команды |
 | `MainWindow.Weather.cs`, `WeatherService.cs` | Погода в раскрытых часах и на своей странице; место от Windows, прогноз с Open-Meteo |
