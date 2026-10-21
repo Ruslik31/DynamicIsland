@@ -27,7 +27,7 @@ public partial class MainWindow : Window
         [View.Record] = new(132, 34, 17),
         [View.Volume] = new(250, 34, 17),
         [View.Charge] = new(230, 34, 17),
-        [View.Headset] = new(340, 96, 41),
+        [View.Headset] = new(320, 64, 29),
         [View.Focus] = new(236, 34, 17),
         [View.Toast] = new(340, 68, 30),
         [View.Notice] = new(320, 64, 29),

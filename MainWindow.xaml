@@ -572,26 +572,23 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid x:Name="HeadsetView" Width="340" Height="96" HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <Grid Width="314" Height="56" Margin="0,27,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                        <local:ChargeGlow x:Name="HeadsetGlow"/>
-                        <StackPanel Orientation="Horizontal" Margin="22,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
-                            <local:Icon x:Name="HeadsetBattery" Kind="Battery" Width="22" Height="22" VerticalAlignment="Center"/>
-                            <local:Digits x:Name="HeadsetPercent" Text="70%" FontSize="16" FontWeight="SemiBold" Margin="4,0,0,0"
-                                          VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel x:Name="HeadsetTicks" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Rectangle Width="2" Height="9" RadiusX="1" RadiusY="1" Opacity="0.35" VerticalAlignment="Center"/>
-                            <Ellipse Width="4" Height="4" Margin="9,0,0,0" Opacity="0.35" VerticalAlignment="Center"/>
-                            <Rectangle Width="2" Height="13" RadiusX="1" RadiusY="1" Margin="9,0,0,0" Opacity="0.8" VerticalAlignment="Center"/>
-                            <Ellipse Width="4" Height="4" Margin="9,0,0,0" Opacity="0.35" VerticalAlignment="Center"/>
-                            <Rectangle Width="2" Height="9" RadiusX="1" RadiusY="1" Margin="9,0,0,0" Opacity="0.35" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock x:Name="HeadsetLabel" Text="AirPods" FontSize="15" FontWeight="SemiBold" MaxWidth="112"
-                                   TextTrimming="CharacterEllipsis" Margin="0,0,25,0"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                    </Grid>
-                    <local:Gadget x:Name="HeadsetGadget" Width="72" Height="56" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                <Grid x:Name="HeadsetView" Width="320" Height="64" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:Gadget x:Name="HeadsetGadget" Width="58" Height="45" Margin="11,0,0,0"
+                                  HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    <StackPanel Margin="76,0,92,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="HeadsetLabel" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="HeadsetState" FontSize="12" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,20,0">
+                        <local:Digits x:Name="HeadsetPercent" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Grid Width="27" Height="13" Margin="7,0,0,0" VerticalAlignment="Center">
+                            <Border Width="24" HorizontalAlignment="Left" CornerRadius="4" BorderBrush="{StaticResource Faint}" BorderThickness="1"/>
+                            <Border x:Name="HeadsetFill" Width="0" Height="9" Margin="2,0,0,0" CornerRadius="2.5"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                            <Border Width="2" Height="5" CornerRadius="0,1,1,0" Background="{StaticResource Faint}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
                 </Grid>
 
                 <Grid x:Name="FocusView" Width="236" Height="34" HorizontalAlignment="Center" VerticalAlignment="Top">
