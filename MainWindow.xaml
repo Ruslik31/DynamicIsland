@@ -1077,8 +1077,24 @@
                         </StackPanel>
                         <StackPanel x:Name="UpdateNotes" Margin="12,10,12,0">
                             <TextBlock Style="{StaticResource Caption}" Text="ЧТО НОВОГО"/>
-                            <TextBlock x:Name="UpdateNotesText" FontSize="12.5" Foreground="{StaticResource Dim}" Margin="0,5,0,0"
-                                       TextWrapping="Wrap" LineHeight="18" LineStackingStrategy="BlockLineHeight"/>
+                            <Border x:Name="UpdateNotesBox" MaxHeight="216" Margin="0,5,0,0" ClipToBounds="True">
+                                <Border.OpacityMask>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop x:Name="UpdateNotesEdgeTop" Color="Black" Offset="0"/>
+                                        <GradientStop Color="Black" Offset="0.1"/>
+                                        <GradientStop Color="Black" Offset="0.9"/>
+                                        <GradientStop x:Name="UpdateNotesEdgeBottom" Color="Black" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.OpacityMask>
+                                <StackPanel>
+                                    <TextBlock x:Name="UpdateNotesText" FontSize="12.5" Foreground="{StaticResource Dim}"
+                                               TextWrapping="Wrap" LineHeight="18" LineStackingStrategy="BlockLineHeight">
+                                        <TextBlock.RenderTransform>
+                                            <TranslateTransform x:Name="UpdateNotesMove"/>
+                                        </TextBlock.RenderTransform>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                         <Grid Height="36" Margin="4,14,4,0">
                             <Button x:Name="UpdateButton" Style="{StaticResource ChipButton}" Height="36" Margin="0"

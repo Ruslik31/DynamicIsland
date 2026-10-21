@@ -138,6 +138,7 @@ public partial class MainWindow
         ApplyMotionBlur();
         ApplyShelfScroll();
         ApplyLookScroll();
+        ApplyUpdateNotesScroll();
         StretchVolumeBar();
 
         IslandScale.ScaleX = IslandScale.ScaleY = scale;

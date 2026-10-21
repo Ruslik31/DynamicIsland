@@ -9,7 +9,7 @@ namespace DynamicIsland;
 
 public partial class MainWindow
 {
-    const double UpdatePagePadding = 14;
+    const double UpdatePagePadding = 14, UpdateNotesWheelStep = 54;
     const int MegabyteShift = 20;
     const double LookHeight = 430, LookTilesHeight = 72, LookWheelStep = 80;
     const double LookEdgeZone = 70, LookEdgeScale = 0.8;
@@ -20,6 +20,7 @@ public partial class MainWindow
 
     Border? _openLookTiles;
     readonly Spring _lookScroll = new(0, 260, 30);
+    readonly Spring _updateNotesScroll = new(0, 260, 30);
 
     void SettingsRow_Click(object sender, RoutedEventArgs e) => ShowPanelAndCheckUpdate(Panel.Settings);
 
@@ -155,7 +156,9 @@ public partial class MainWindow
             _ => found ? "вместо " + Updater.CurrentVersion : "",
         };
         UpdateNotes.SetVisible(found && _updater.Notes.Length > 0);
-        UpdateNotesText.Text = string.Join('\n', _updater.Notes.Select(note => "·  " + note));
+        string notes = string.Join('\n', _updater.Notes.Select(note => "·  " + note));
+        if (UpdateNotesText.Text != notes) _updateNotesScroll.Snap(0);
+        UpdateNotesText.Text = notes;
 
         UpdateButton.SetVisible(!loading);
         UpdateLoad.SetVisible(loading);
@@ -192,6 +195,22 @@ public partial class MainWindow
 
         UpdatePage.Height = height;
         if (_view == View.Update) UpdateTargets();
+    }
+
+    double UpdateNotesOverflow => Math.Max(UpdateNotesText.ActualHeight - UpdateNotesBox.ActualHeight, 0);
+
+    void ScrollUpdateNotes(int notches)
+    {
+        _updateNotesScroll.Target = Math.Clamp(_updateNotesScroll.Target + notches * UpdateNotesWheelStep, 0, UpdateNotesOverflow);
+        StartShapeLoop();
+    }
+
+    void ApplyUpdateNotesScroll()
+    {
+        double scrolled = Math.Min(_updateNotesScroll.Value, UpdateNotesOverflow);
+        UpdateNotesMove.Y = -scrolled;
+        UpdateNotesEdgeTop.Color = EdgeFade(scrolled);
+        UpdateNotesEdgeBottom.Color = EdgeFade(UpdateNotesOverflow - scrolled);
     }
 
     void SizeSlider_Changed(object? sender, EventArgs e) => SetScale((int)SizeSlider.Value);
