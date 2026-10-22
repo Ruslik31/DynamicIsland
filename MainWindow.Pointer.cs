@@ -126,8 +126,14 @@ public partial class MainWindow
             EndTransient();
             return;
         }
+        if (_view == View.Message && _messageOpen is { } openChat)
+        {
+            openChat();
+            EndTransient();
+            return;
+        }
         if (_ringing || _panel != Panel.None) SelectPanel(Panel.None);
-        else SelectPanel(IsMediaActive ? Panel.Player : _obs.Recording ? Panel.Record : _countdown.IsActive ? Panel.Timer : Panel.Player);
+        else SelectPanel(ShowsVoice ? Panel.Voice : IsMediaActive ? Panel.Player : _obs.Recording ? Panel.Record : _countdown.IsActive ? Panel.Timer : Panel.Player);
         UpdateView();
     }
 
@@ -203,6 +209,7 @@ public partial class MainWindow
         else if (_view == View.Look && LookOverflow > 0) ScrollLook(-step);
         else if (_view == View.Shelf && ShelfOverflow > 0) ScrollShelf(-step);
         else if (_view == View.Update && UpdateNotesOverflow > 0) ScrollUpdateNotes(-step);
+        else if (_view == View.VoiceBig && AdjustMemberVolume(step)) { }
         else if (_view == View.MediaBig && Settings.AppVolume && _audio.AdjustAppVolume(_media.Source, step * WheelVolumeStep, out float level))
             ShowPlayerVolume(level, false, true);
         else if (IsVolumeAtLimit(up)) OvershootVolume(up);

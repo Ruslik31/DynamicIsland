@@ -58,7 +58,7 @@ public partial class MainWindow
 
     (string Text, double Sung, double Seconds) PointerLyricLine()
     {
-        if (!Settings.PointerLyric || !Settings.Lyrics || !_media.IsPlaying || _hiddenByFullscreen) return ("", 0, 0);
+        if (!Settings.Music || !Settings.PointerLyric || !Settings.Lyrics || !_media.IsPlaying || _hiddenByFullscreen) return ("", 0, 0);
 
         LyricsService.Line[] lines = _lyrics.LinesFor(_media.Duration);
         TimeSpan at = LyricTime;

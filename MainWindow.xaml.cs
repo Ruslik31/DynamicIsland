@@ -13,9 +13,18 @@ namespace DynamicIsland;
 
 public partial class MainWindow : Window
 {
-    enum View { Idle, Media, Timer, Record, Volume, Charge, Headset, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics, Loading }
+    enum View
+    {
+        Idle, Media, Timer, Record, Volume, Charge, Headset, Focus, Toast, Notice, MediaBig, IdleBig, TimerBig, TimerSet, RecordBig, RecordSet,
+        Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics, Loading,
+        Voice, VoiceBig, Message, Discord, DiscordVoice, DiscordMessages,
+    }
 
-    enum Panel { None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics }
+    enum Panel
+    {
+        None, Player, Timer, TimerSet, Record, Menu, Settings, Look, Shelf, Weather, Place, Qr, Update, Lyrics,
+        Voice, Discord, DiscordVoice, DiscordMessages,
+    }
 
     readonly record struct PillShape(double Width, double Height, double Radius);
 
@@ -37,8 +46,8 @@ public partial class MainWindow : Window
         [View.TimerSet] = new(300, 190, 38),
         [View.RecordBig] = new(340, 92, 40),
         [View.RecordSet] = new(320, 92, 40),
-        [View.Menu] = new(300, 368, 34),
-        [View.Settings] = new(320, 374, 34),
+        [View.Menu] = new(300, 408, 34),
+        [View.Settings] = new(320, 414, 34),
         [View.Look] = new(352, LookHeight, 34),
         [View.Shelf] = new(380, 136, 34),
         [View.Weather] = new(340, 190, 34),
@@ -47,6 +56,12 @@ public partial class MainWindow : Window
         [View.Update] = new(320, 150, 34),
         [View.Lyrics] = new(352, 312, 34),
         [View.Loading] = new(118, 34, 17),
+        [View.Voice] = new(92, 34, 17),
+        [View.VoiceBig] = new(360, 170, 38),
+        [View.Message] = new(340, 72, 31),
+        [View.Discord] = new(320, 254, 34),
+        [View.DiscordVoice] = new(340, 256, 34),
+        [View.DiscordMessages] = new(340, 298, 34),
     };
 
     readonly record struct MediaSpot(
@@ -63,9 +78,11 @@ public partial class MainWindow : Window
         [View.MediaBig] = new(20, 20, 64, 22, 52, 38, 26, 1),
     };
 
-    static readonly View[] MenuPages = [View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather, View.Qr];
+    static readonly View[] MenuPages = [View.Discord, View.Settings, View.Look, View.TimerSet, View.TimerBig, View.RecordSet, View.RecordBig, View.Shelf, View.Weather, View.Qr];
 
     static readonly View[] SettingsPages = [View.Update, View.Lyrics];
+
+    static readonly View[] DiscordPages = [View.DiscordVoice, View.DiscordMessages];
 
     static readonly View[] WeatherPages = [View.Place];
 
@@ -84,6 +101,7 @@ public partial class MainWindow : Window
     readonly SolidColorBrush _dim, _orange, _green, _red, _indigo;
     readonly AudioService _audio = new();
     readonly MediaService _media;
+    readonly DiscordService _discord;
     readonly LyricsService _lyrics = new();
     readonly NetworkService _network;
     readonly Updater _updater = new();
@@ -141,6 +159,12 @@ public partial class MainWindow : Window
             [View.Update] = UpdatePage,
             [View.Lyrics] = LyricsPage,
             [View.Loading] = LoadingView,
+            [View.Voice] = VoiceView,
+            [View.VoiceBig] = VoiceBigView,
+            [View.Message] = MessageView,
+            [View.Discord] = DiscordPage,
+            [View.DiscordVoice] = DiscordVoicePage,
+            [View.DiscordMessages] = DiscordMessagesPage,
         };
         _spotSprings = [_coverLeft, _coverTop, _coverSize, _barsRight, _barsCenterY, _barsWidth, _barsHeight, _barsOpen];
         _springs =
@@ -170,6 +194,8 @@ public partial class MainWindow : Window
 
         _media = new MediaService(Dispatcher);
         _media.Changed += OnMediaChanged;
+        _discord = new DiscordService(Dispatcher);
+        PrepareDiscord();
         _lyrics.Changed += OnLyricsChanged;
         _network = new NetworkService(Dispatcher);
         _network.Changed += OnNetworkChanged;
@@ -218,7 +244,9 @@ public partial class MainWindow : Window
         }
     }
 
-    bool IsMediaActive => _media.HasTrack && (_media.IsPlaying || DateTime.UtcNow - _lastPlayedAt < PausedMediaLinger);
+    bool MusicOn => Settings.Music && _media.HasTrack;
+
+    bool IsMediaActive => MusicOn && (_media.IsPlaying || DateTime.UtcNow - _lastPlayedAt < PausedMediaLinger);
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -291,6 +319,7 @@ public partial class MainWindow : Window
         try { await _network.StartAsync(); }
         catch (Exception ex) { App.Log(ex); }
         _obs.Start();
+        StartDiscord();
     }
 
     void CenterOnScreen()
@@ -313,6 +342,7 @@ public partial class MainWindow : Window
     {
         _ticker.Stop();
         _alarm.Stop();
+        _discord.Dispose();
         _pointerLyric?.ShowLine("", 0, 0);
         _glass.Hide();
         var fade = new DoubleAnimation(0, Ms(220));
@@ -351,6 +381,7 @@ public partial class MainWindow : Window
         if (_ticks % ClockUpdateTicks == 0)
         {
             Safely(UpdateClock);
+            Safely(UpdateVoiceTime);
             Safely(PollPower);
             _ = _weather.RefreshAsync();
             Safely(StayOnTop);
@@ -368,6 +399,10 @@ public partial class MainWindow : Window
             Panel.Look => View.Look,
             Panel.Update => View.Update,
             Panel.Lyrics => View.Lyrics,
+            Panel.Discord => View.Discord,
+            Panel.DiscordVoice => View.DiscordVoice,
+            Panel.DiscordMessages => View.DiscordMessages,
+            Panel.Voice => _discord.InCall ? View.VoiceBig : View.IdleBig,
             Panel.Shelf => View.Shelf,
             Panel.Weather => View.Weather,
             Panel.Place => View.Place,
@@ -375,11 +410,11 @@ public partial class MainWindow : Window
             Panel.TimerSet => View.TimerSet,
             Panel.Record => _obs.Recording ? View.RecordBig : View.RecordSet,
             Panel.Timer when _countdown.IsActive => View.TimerBig,
-            Panel.Timer or Panel.Player => _media.HasTrack ? View.MediaBig : View.IdleBig,
+            Panel.Timer or Panel.Player => ShowsVoice ? View.VoiceBig : MusicOn ? View.MediaBig : View.IdleBig,
             _ => _transientView ?? (_updater.State == Updater.Stage.Loading ? View.Loading
-                : IsMediaActive ? View.Media : _obs.Recording ? View.Record : _countdown.IsActive ? View.Timer : View.Idle),
+                : ShowsVoice ? View.Voice : IsMediaActive ? View.Media : _obs.Recording ? View.Record : _countdown.IsActive ? View.Timer : View.Idle),
         };
-        return target == View.Toast && !_media.HasTrack ? View.Idle : target;
+        return target == View.Toast && !MusicOn ? View.Idle : target;
     }
 
     void UpdateView()
@@ -445,10 +480,12 @@ public partial class MainWindow : Window
 
     static bool IsPageOf(View parent, View page) =>
         parent == View.Menu && MenuPages.Contains(page) || parent == View.Settings && SettingsPages.Contains(page)
-        || parent == View.Weather && WeatherPages.Contains(page);
+        || parent == View.Weather && WeatherPages.Contains(page) || parent == View.Discord && DiscordPages.Contains(page);
 
     PillShape ShapeOf(View view) => view switch
     {
+        View.Voice => PillShapes[view] with { Width = _voiceWidth },
+        View.VoiceBig => PillShapes[view] with { Height = VoiceBigView.Height },
         View.Media => PillShapes[view] with { Width = _compactMediaWidth },
         View.MediaBig when _playerHasLyricRoom => PillShapes[view] with { Height = PlayerHeight + PlayerLyricsHeight },
         View.RecordSet => PillShapes[view] with { Width = RecordSetView.Width },

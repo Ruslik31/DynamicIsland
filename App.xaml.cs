@@ -5,8 +5,8 @@ namespace DynamicIsland;
 
 public partial class App : Application
 {
-    const string InstanceName = "DynamicIsland.SingleInstance";
-    const string LogFileName = "DynamicIsland.log";
+    const string InstanceName = "DiscordIsland.SingleInstance";
+    const string LogFileName = "DiscordIsland.log";
     static readonly TimeSpan PredecessorExitTimeout = TimeSpan.FromSeconds(10);
 
     Mutex? _mutex;

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DynamicIsland"
-        Title="Dynamic Island" Width="680" Height="622"
+        Title="Discord Island" Width="680" Height="622"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ShowActivated="False" Topmost="True" ResizeMode="NoResize"
         Focusable="False" UseLayoutRounding="True"
@@ -875,9 +875,220 @@
                     </Button>
                 </Grid>
 
-                <Grid x:Name="MenuView" Width="300" Height="368" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="VoiceView" Width="92" Height="34" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel x:Name="VoiceAvatars" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Margin="6,0,0,0"/>
+                    <local:VoiceIcon x:Name="VoiceStateIcon" Kind="Mic" Width="17" Height="17"
+                                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,13,0"/>
+                </Grid>
+
+                <Grid x:Name="VoiceBigView" Width="360" Height="170" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel Margin="22,17,22,0" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal">
+                            <local:Icon Kind="Loud" Width="16" Height="16" Fill="{StaticResource Green}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="VoiceChannelName" FontSize="15" FontWeight="SemiBold" Margin="8,0,0,0" MaxWidth="290"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="24,1,0,0">
+                            <TextBlock x:Name="VoiceGuildName" FontSize="12" Foreground="{StaticResource Dim}" MaxWidth="200"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="VoiceDot" Text="·" FontSize="12" Foreground="{StaticResource Dim}" Margin="6,0,6,0"
+                                       VerticalAlignment="Center"/>
+                            <local:Digits x:Name="VoiceTime" Text="0:00" FontSize="12" Foreground="{StaticResource Dim}"
+                                          VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="VoiceMembers" Margin="14,66,14,0" VerticalAlignment="Top"/>
+                    <local:Puddle HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource IconButton}" Width="48" Height="48" Click="VoiceMute_Click">
+                                <Grid Width="48" Height="48">
+                                    <Ellipse x:Name="VoiceMuteDisc" Fill="#2EFFFFFF"/>
+                                    <local:VoiceIcon x:Name="VoiceMuteIcon" Kind="Mic" Width="20" Height="20"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" Width="48" Height="48" Margin="12,0" Click="VoiceDeafen_Click">
+                                <Grid Width="48" Height="48">
+                                    <Ellipse x:Name="VoiceDeafenDisc" Fill="#2EFFFFFF"/>
+                                    <local:VoiceIcon x:Name="VoiceDeafenIcon" Kind="Headset" Width="20" Height="20"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" Width="48" Height="48" local:Puddle.Tint="#FF453A" Click="VoiceLeave_Click">
+                                <Grid Width="48" Height="48">
+                                    <Ellipse Fill="{StaticResource Red}" Opacity="0.25"/>
+                                    <Path Data="M1,1 L13,13 M13,1 L1,13" Stroke="{StaticResource Red}" StrokeThickness="2.4"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </local:Puddle>
+                </Grid>
+
+                <Grid x:Name="MessageView" Width="340" Height="72" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:Avatar x:Name="MessageAvatar" Width="46" Height="46" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                  Margin="12,0,0,0"/>
+                    <StackPanel Margin="66,0,18,0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="MessageAuthor" FontSize="14" FontWeight="SemiBold" MaxWidth="176"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="MessageWhere" FontSize="12" Foreground="{StaticResource Dim}" Margin="6,1,0,0"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock x:Name="MessageText" FontSize="12.5" Foreground="{StaticResource Dim}" Margin="0,2,0,0"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="34"
+                                   LineHeight="16" LineStackingStrategy="BlockLineHeight"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid x:Name="DiscordPage" Width="320" Height="254" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:RowList Margin="10,8,10,0">
+                        <Button Style="{StaticResource BackButton}" Content="DISCORD" Click="DiscordBack_Click"/>
+                        <Grid Height="34">
+                            <Ellipse x:Name="DiscordDot" Width="8" Height="8" Fill="{StaticResource Faint}"
+                                     HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                            <TextBlock x:Name="DiscordStatus" FontSize="12.5" Foreground="{StaticResource Dim}" Margin="32,0,12,0"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordVoiceRow_Click">
+                            <Grid>
+                                <local:VoiceIcon Kind="Headset" Width="17" Height="17" Fill="{StaticResource Dim}"
+                                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Звонок"/>
+                                <local:Icon Style="{StaticResource RowChevron}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordMessagesRow_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Quote"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Сообщения"/>
+                                <local:Icon Style="{StaticResource RowChevron}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordPlugin_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Update"/>
+                                <TextBlock x:Name="DiscordPluginLabel" Style="{StaticResource RowLabel}" Text="Установить плагин"/>
+                                <TextBlock x:Name="DiscordPluginState" Foreground="{StaticResource Dim}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordLink_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Bell"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Сообщать о подключении"/>
+                                <local:Toggle x:Name="DiscordLinkSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                    </local:RowList>
+                </Grid>
+
+                <Grid x:Name="DiscordVoicePage" Width="340" Height="256" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:RowList Margin="10,8,10,0">
+                        <Button Style="{StaticResource BackButton}" Content="ЗВОНОК" Click="DiscordVoiceBack_Click"/>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordVoice_Click">
+                            <Grid>
+                                <local:VoiceIcon Kind="Headset" Width="17" Height="17" Fill="{StaticResource Dim}"
+                                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Остров в звонке"/>
+                                <local:Toggle x:Name="DiscordVoiceSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordSpeaking_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Bars"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Подсвечивать говорящих"/>
+                                <local:Toggle x:Name="DiscordSpeakingSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordMoves_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Plus"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Вход и выход участников"/>
+                                <local:Toggle x:Name="DiscordMovesSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordInGames_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Expand"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Видно в играх"/>
+                                <local:Toggle x:Name="DiscordInGamesSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordAvatars_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Size"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Аватарок в острове"/>
+                                <local:Segments x:Name="DiscordAvatarsSegments" Style="{StaticResource RowSegments}" Labels="3|4|5|6"/>
+                            </Grid>
+                        </Button>
+                    </local:RowList>
+                </Grid>
+
+                <Grid x:Name="DiscordMessagesPage" Width="340" Height="298" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:RowList Margin="10,8,10,0">
+                        <Button Style="{StaticResource BackButton}" Content="СООБЩЕНИЯ" Click="DiscordMessagesBack_Click"/>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordDm_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Quote"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Личные сообщения"/>
+                                <local:Toggle x:Name="DiscordDmSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordMention_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Pointer"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Упоминания и роли"/>
+                                <local:Toggle x:Name="DiscordMentionSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordEveryone_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Sparkle"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="@everyone и @here"/>
+                                <local:Toggle x:Name="DiscordEveryoneSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordPreview_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Lines"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Показывать текст"/>
+                                <local:Toggle x:Name="DiscordPreviewSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordQuiet_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Moon"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Молчать, если чат открыт"/>
+                                <local:Toggle x:Name="DiscordQuietSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordMessageTime_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Timer"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Сколько висит, сек"/>
+                                <local:Segments x:Name="DiscordMessageTimeSegments" Style="{StaticResource RowSegments}" Labels="3|6|10"/>
+                            </Grid>
+                        </Button>
+                    </local:RowList>
+                </Grid>
+
+                <Grid x:Name="MenuView" Width="300" Height="408" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,14,10,0">
-                        <TextBlock Style="{StaticResource Caption}" Text="DYNAMIC ISLAND" Margin="12,0,0,6"/>
+                        <TextBlock Style="{StaticResource Caption}" Text="DISCORD ISLAND" Margin="12,0,0,6"/>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordRow_Click">
+                            <Grid>
+                                <local:VoiceIcon Kind="Headset" Width="17" Height="17" Fill="{StaticResource Dim}"
+                                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Discord"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock x:Name="MenuDiscord" Foreground="{StaticResource Dim}" VerticalAlignment="Center"/>
+                                    <local:Icon Style="{StaticResource RowChevron}" Margin="8,1,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
                         <Button Style="{StaticResource RowButton}" Click="TimerRow_Click">
                             <Grid>
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Timer"/>
@@ -948,9 +1159,16 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="SettingsView" Width="320" Height="374" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="SettingsView" Width="320" Height="414" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="НАСТРОЙКИ" Click="SettingsBack_Click"/>
+                        <Button Style="{StaticResource RowButton}" Click="Music_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Note"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Музыкальный плеер"/>
+                                <local:Toggle x:Name="MusicSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
                         <Button Style="{StaticResource RowButton}" Click="LyricsRow_Click">
                             <Grid>
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Quote"/>

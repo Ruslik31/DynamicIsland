@@ -5,7 +5,7 @@ namespace DynamicIsland;
 static class Autostart
 {
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    const string Name = "DynamicIsland";
+    const string Name = "DiscordIsland";
 
     public static bool Enabled
     {

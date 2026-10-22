@@ -76,7 +76,7 @@ public partial class MainWindow
         }
         if (_media.IsPlaying || turned) _lastPlayedAt = DateTime.UtcNow;
 
-        if (turned || (newTrack && _media.IsPlaying)) ShowTransient(View.Toast, ToastSeconds);
+        if (Settings.Music && (turned || (newTrack && _media.IsPlaying))) ShowTransient(View.Toast, ToastSeconds);
         TrackLyrics();
         UpdateView();
         UpdateLyric();
@@ -115,7 +115,7 @@ public partial class MainWindow
 
     void SyncRim()
     {
-        bool music = _media.HasTrack && (_cover != null || Settings.Accent != null) && (IsMediaActive || _view == View.MediaBig);
+        bool music = MusicOn && (_cover != null || Settings.Accent != null) && (IsMediaActive || _view == View.MediaBig);
         Color? tint = Settings.Rim && music ? AccentColor : null;
         if (tint == _rimColor) return;
         _rimColor = tint;
@@ -193,6 +193,7 @@ public partial class MainWindow
             MediaView.Width = w;
             CentreLyrics();
         }
+        if (_view == View.Voice) VoiceView.Width = w;
         if (_view != View.MediaBig) return;
 
         MediaBigView.Height = Math.Max(h, PlayerHeight);

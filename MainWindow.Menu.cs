@@ -123,6 +123,8 @@ public partial class MainWindow
         LyricPartingSwitch.Set(Settings.LyricParting, animate);
         RimSwitch.Set(Settings.Rim, animate);
         AppVolumeSwitch.Set(Settings.AppVolume, animate);
+        MusicSwitch.Set(Settings.Music, animate);
+        SyncDiscordSwitches(animate);
         NetworkSwitch.Set(Settings.Network, animate);
         WeatherSwitch.Set(Settings.Weather, animate);
         FullscreenSwitch.Set(Settings.HideFullscreen, animate);

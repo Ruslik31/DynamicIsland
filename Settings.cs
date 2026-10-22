@@ -55,9 +55,21 @@ enum SeekHover
 
 static class Settings
 {
-    const string Key = @"Software\DynamicIsland";
+    const string Key = @"Software\DiscordIsland";
     const int MinScale = 85, MaxScale = 130, MaxGap = 24;
     const int DefaultScale = 100, DefaultGap = 8;
+    const int MaxAvatarChoice = 3, MaxMessageSecondsChoice = 2;
+    static readonly int[] AvatarCounts = [3, 4, 5, 6];
+    static readonly double[] MessageSeconds = [3.5, 6, 10];
+
+    static bool _music = ReadSwitch(nameof(Music), false);
+    static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
+    static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), false), _discordInGames = ReadSwitch(nameof(DiscordInGames));
+    static bool _discordDm = ReadSwitch(nameof(DiscordDm)), _discordMention = ReadSwitch(nameof(DiscordMention));
+    static bool _discordEveryone = ReadSwitch(nameof(DiscordEveryone), false), _discordPreview = ReadSwitch(nameof(DiscordPreview));
+    static bool _discordQuietFocused = ReadSwitch(nameof(DiscordQuietFocused)), _discordLink = ReadSwitch(nameof(DiscordLink));
+    static int _discordAvatars = Math.Clamp(Read(nameof(DiscordAvatars), 1), 0, MaxAvatarChoice);
+    static int _discordMessageTime = Math.Clamp(Read(nameof(DiscordMessageTime), 1), 0, MaxMessageSecondsChoice);
 
     static bool _lyrics = ReadSwitch(nameof(Lyrics)), _lyricEffects = ReadSwitch(nameof(LyricEffects));
     static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen));
@@ -78,6 +90,95 @@ static class Settings
     static int _scale = Math.Clamp(Read(nameof(Scale), DefaultScale), MinScale, MaxScale);
     static int _gap = Math.Clamp(Read(nameof(Gap), DefaultGap), 0, MaxGap);
     static int _accent = Read(nameof(Accent), 0);
+
+    /// <summary>Музыкальный плеер острова. Остров теперь про Discord, поэтому по умолчанию выключен.</summary>
+    public static bool Music
+    {
+        get => _music;
+        set => Write(nameof(Music), _music = value);
+    }
+
+    /// <summary>Остров показывает голосовой канал, пока вы в звонке.</summary>
+    public static bool DiscordVoice
+    {
+        get => _discordVoice;
+        set => Write(nameof(DiscordVoice), _discordVoice = value);
+    }
+
+    public static bool DiscordSpeaking
+    {
+        get => _discordSpeaking;
+        set => Write(nameof(DiscordSpeaking), _discordSpeaking = value);
+    }
+
+    /// <summary>Короткое уведомление, когда кто-то заходит в канал или выходит из него.</summary>
+    public static bool DiscordMoves
+    {
+        get => _discordMoves;
+        set => Write(nameof(DiscordMoves), _discordMoves = value);
+    }
+
+    /// <summary>Не прятать остров, пока в звонке открыта игра на весь экран.</summary>
+    public static bool DiscordInGames
+    {
+        get => _discordInGames;
+        set => Write(nameof(DiscordInGames), _discordInGames = value);
+    }
+
+    public static bool DiscordDm
+    {
+        get => _discordDm;
+        set => Write(nameof(DiscordDm), _discordDm = value);
+    }
+
+    public static bool DiscordMention
+    {
+        get => _discordMention;
+        set => Write(nameof(DiscordMention), _discordMention = value);
+    }
+
+    public static bool DiscordEveryone
+    {
+        get => _discordEveryone;
+        set => Write(nameof(DiscordEveryone), _discordEveryone = value);
+    }
+
+    public static bool DiscordPreview
+    {
+        get => _discordPreview;
+        set => Write(nameof(DiscordPreview), _discordPreview = value);
+    }
+
+    /// <summary>Молчать о сообщениях, пока открыт тот самый чат в окне Discord.</summary>
+    public static bool DiscordQuietFocused
+    {
+        get => _discordQuietFocused;
+        set => Write(nameof(DiscordQuietFocused), _discordQuietFocused = value);
+    }
+
+    public static bool DiscordLink
+    {
+        get => _discordLink;
+        set => Write(nameof(DiscordLink), _discordLink = value);
+    }
+
+    /// <summary>Номер варианта «сколько аватарок в свёрнутом острове».</summary>
+    public static int DiscordAvatars
+    {
+        get => _discordAvatars;
+        set => Write(nameof(DiscordAvatars), _discordAvatars = Math.Clamp(value, 0, MaxAvatarChoice));
+    }
+
+    public static int DiscordAvatarCount => AvatarCounts[_discordAvatars];
+
+    /// <summary>Номер варианта «сколько секунд висит сообщение».</summary>
+    public static int DiscordMessageTime
+    {
+        get => _discordMessageTime;
+        set => Write(nameof(DiscordMessageTime), _discordMessageTime = Math.Clamp(value, 0, MaxMessageSecondsChoice));
+    }
+
+    public static double DiscordMessageSeconds => MessageSeconds[_discordMessageTime];
 
     public static bool Dots
     {

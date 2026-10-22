@@ -13,8 +13,8 @@ sealed class Updater
 
     public const string RestartedFlag = "--updated";
 
-    const string LatestReleaseUrl = "https://api.github.com/repos/mihailkotovski/DynamicIsland/releases/latest";
-    const string AssetName = "DynamicIsland.exe";
+    const string LatestReleaseUrl = "https://api.github.com/repos/Ruslik31/DynamicIsland/releases/latest";
+    const string AssetName = "DiscordIsland.exe";
     const string HashPrefix = "sha256:";
     const int MaxNotes = 6;
     const int BufferSize = 1 << 16;
@@ -185,7 +185,7 @@ sealed class Updater
     static HttpClient CreateClient(Version current)
     {
         var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("DynamicIsland/" + current);
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("DiscordIsland/" + current);
         http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
         return http;
     }

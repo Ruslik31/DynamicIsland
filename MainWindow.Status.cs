@@ -38,7 +38,7 @@ public partial class MainWindow
 
     void CheckFullscreen()
     {
-        bool hidden = Settings.HideFullscreen && !_pickingArea && Native.IsForegroundFullscreen(_hwnd);
+        bool hidden = Settings.HideFullscreen && !_pickingArea && !(Settings.DiscordInGames && ShowsVoice) && Native.IsForegroundFullscreen(_hwnd);
         if (hidden == _hiddenByFullscreen) return;
         _hiddenByFullscreen = hidden;
         UpdateTargets();
