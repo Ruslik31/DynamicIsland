@@ -57,7 +57,9 @@ public sealed class Avatar : FrameworkElement
     static readonly Color Speak = Color.FromRgb(0x30, 0xD1, 0x58);
     static readonly Brush RingBrush = Frozen(new SolidColorBrush(Speak));
     static readonly Brush WarningBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)));
+    const double LiveWidthShare = 0.68, LiveHeightShare = 0.31, LiveInsetX = 0.02, LiveInsetY = 0.07, LiveRadius = 2.6, LiveTextShare = 0.74;
     static readonly Typeface LetterFace = new("Segoe UI Semibold");
+    static readonly Typeface LiveFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
     public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
         nameof(Source), typeof(string), typeof(Avatar), new FrameworkPropertyMetadata(null, (d, _) => ((Avatar)d).Load()));
@@ -70,6 +72,9 @@ public sealed class Avatar : FrameworkElement
 
     public static readonly DependencyProperty StatusProperty = DependencyProperty.Register(
         nameof(Status), typeof(AvatarStatus), typeof(Avatar), new FrameworkPropertyMetadata(AvatarStatus.None, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty LiveProperty = DependencyProperty.Register(
+        nameof(Live), typeof(bool), typeof(Avatar), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
     readonly Spring _ring = new(0, 420, 16);
     readonly FrameLoop _loop;
@@ -104,6 +109,13 @@ public sealed class Avatar : FrameworkElement
     {
         get => (AvatarStatus)GetValue(StatusProperty);
         set => SetValue(StatusProperty, value);
+    }
+
+    /// <summary>Человек ведёт трансляцию: красная плашка LIVE в левом верхнем углу.</summary>
+    public bool Live
+    {
+        get => (bool)GetValue(LiveProperty);
+        set => SetValue(LiveProperty, value);
     }
 
     void Load()
@@ -163,6 +175,20 @@ public sealed class Avatar : FrameworkElement
             dc.DrawEllipse(null, pen, centre, reach, reach);
         }
         if (Status != AvatarStatus.None) DrawBadge(dc, centre, radius, size);
+        if (Live) DrawLive(dc, centre, size);
+    }
+
+    /// <summary>Красная плашка с белым LIVE; чёрная кайма вырезает её из аватарки, как и значок звука.</summary>
+    void DrawLive(DrawingContext dc, Point centre, double size)
+    {
+        double width = size * LiveWidthShare, height = size * LiveHeightShare;
+        var plate = new Rect(centre.X - size / 2 + size * LiveInsetX, centre.Y - size / 2 + size * LiveInsetY, width, height);
+        dc.DrawRoundedRectangle(Brushes.Black, null, Rect.Inflate(plate, BadgeCut, BadgeCut), LiveRadius + BadgeCut, LiveRadius + BadgeCut);
+        dc.DrawRoundedRectangle(WarningBrush, null, plate, LiveRadius, LiveRadius);
+
+        var text = new FormattedText("LIVE", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, LiveFace,
+            height * LiveTextShare, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        dc.DrawText(text, new Point(plate.X + (plate.Width - text.Width) / 2, plate.Y + (plate.Height - text.Height) / 2));
     }
 
     /// <summary>Чёрный кружок с красным перечёркнутым значком: вырезает кромку аватарки, чтобы значок читался.</summary>

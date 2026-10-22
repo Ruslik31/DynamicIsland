@@ -181,6 +181,7 @@ public partial class MainWindow
             if (!_compactAvatars.TryGetValue(member.Id, out Avatar? avatar)) continue;
             avatar.Speaking = Settings.DiscordSpeaking && _discord.IsSpeaking(member.Id);
             avatar.Status = StatusOf(member);
+            avatar.Live = member.Stream;
         }
     }
 
@@ -262,7 +263,7 @@ public partial class MainWindow
         {
             Width = VoiceRowAvatar, Height = VoiceRowAvatar, Source = member.Avatar, Label = member.Name,
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(8, 0, 0, 0), Status = StatusOf(member),
+            Margin = new Thickness(8, 0, 0, 0), Status = StatusOf(member), Live = member.Stream,
             Speaking = Settings.DiscordSpeaking && _discord.IsSpeaking(member.Id),
         };
         _bigAvatars[member.Id] = avatar;
@@ -289,7 +290,6 @@ public partial class MainWindow
             Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0),
         };
-        if (member.Stream) status.Children.Add(Chip("LIVE", _red));
         if (member.Video) status.Children.Add(StatusIcon(VoiceGlyph.Screen, _dim));
         row.Children.Add(status);
         return row;
@@ -297,13 +297,6 @@ public partial class MainWindow
 
     static VoiceIcon StatusIcon(VoiceGlyph kind, Brush fill) =>
         new() { Kind = kind, Fill = fill, Width = 16, Height = 16, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-
-    static Border Chip(string text, Brush tint) => new()
-    {
-        Background = tint, CornerRadius = new CornerRadius(4), Padding = new Thickness(5, 1, 5, 1), Margin = new Thickness(8, 0, 0, 0),
-        VerticalAlignment = VerticalAlignment.Center,
-        Child = new TextBlock { Text = text, FontSize = 9.5, FontWeight = FontWeights.Bold, Foreground = Brushes.Black },
-    };
 
     void UpdateVoiceTime()
     {
