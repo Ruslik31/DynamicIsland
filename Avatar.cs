@@ -52,12 +52,12 @@ public enum AvatarStatus
 /// <summary>Круглая аватарка с кольцом, которое вспыхивает, пока человек говорит, и значком выключенного звука.</summary>
 public sealed class Avatar : FrameworkElement
 {
-    const double RingRoom = 2.4, RingWidth = 2.2;
+    const double RingRoom = 2.4, RingWidth = 2.2, DimmedOpacity = 0.45;
     const double BadgeShare = 0.44, BadgeOffset = 0.62, BadgeCut = 0.9, GlyphShare = 0.8, BadgeStroke = 2.6;
     static readonly Color Speak = Color.FromRgb(0x30, 0xD1, 0x58);
     static readonly Brush RingBrush = Frozen(new SolidColorBrush(Speak));
     static readonly Brush WarningBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)));
-    const double LiveWidthShare = 0.68, LiveHeightShare = 0.31, LiveInsetX = 0.02, LiveInsetY = 0.07, LiveRadius = 2.6, LiveTextShare = 0.74;
+    const double LiveWidthShare = 0.5, LiveHeightShare = 0.235, LiveInsetX = 0.03, LiveInsetY = 0.07, LiveRadius = 2, LiveTextShare = 0.78;
     static readonly Typeface LetterFace = new("Segoe UI Semibold");
     static readonly Typeface LiveFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
@@ -75,6 +75,9 @@ public sealed class Avatar : FrameworkElement
 
     public static readonly DependencyProperty LiveProperty = DependencyProperty.Register(
         nameof(Live), typeof(bool), typeof(Avatar), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty DimmedProperty = DependencyProperty.Register(
+        nameof(Dimmed), typeof(bool), typeof(Avatar), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
     readonly Spring _ring = new(0, 420, 16);
     readonly FrameLoop _loop;
@@ -118,6 +121,13 @@ public sealed class Avatar : FrameworkElement
         set => SetValue(LiveProperty, value);
     }
 
+    /// <summary>Приглушённая аватарка: человек отключил наушники (используется в списке раскрытого звонка).</summary>
+    public bool Dimmed
+    {
+        get => (bool)GetValue(DimmedProperty);
+        set => SetValue(DimmedProperty, value);
+    }
+
     void Load()
     {
         _image = AvatarImages.Get(Source, () => Dispatcher.BeginInvoke(() =>
@@ -154,6 +164,7 @@ public sealed class Avatar : FrameworkElement
 
         var centre = new Point(ActualWidth / 2, ActualHeight / 2);
         double radius = size / 2 - RingRoom;
+        if (Dimmed) dc.PushOpacity(DimmedOpacity);
 
         if (_image is { } image)
         {
@@ -166,6 +177,7 @@ public sealed class Avatar : FrameworkElement
             dc.DrawEllipse(Frozen(new SolidColorBrush(ColorFor(Label))), null, centre, radius, radius);
             DrawLetter(dc, centre, radius);
         }
+        if (Dimmed) dc.Pop();
 
         double ring = Math.Clamp(_ring.Value, 0, 1.25);
         if (ring > 0.02)
