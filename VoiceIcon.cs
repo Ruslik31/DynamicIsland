@@ -11,10 +11,11 @@ public enum VoiceGlyph
 /// <summary>Микрофон, наушники и трансляция, нарисованные на сетке 24 × 24; «выключено» перечёркнуто чертой.</summary>
 public sealed class VoiceIcon : FrameworkElement
 {
-    const double Grid = 24, Stroke = 1.9, Knockout = 4.2;
+    const double Grid = 24, Stroke = 1.9, Knockout = 4.2, TinyBelow = 16;
 
     static readonly Geometry MicBody = Frozen(new RectangleGeometry(new Rect(9, 2.5, 6, 11.5), 3, 3));
     static readonly Geometry MicHolder = Frozen(Parse("M5.6,11 A6.4,6.4 0 0 0 18.4,11 M12,17.4 V21 M8.6,21 H15.4"));
+    static readonly Geometry MicArc = Frozen(Parse("M5.6,11 A6.4,6.4 0 0 0 18.4,11"));
     static readonly Geometry HeadBand = Frozen(Parse("M4.6,15 V12.4 A7.4,7.4 0 0 1 19.4,12.4 V15"));
     static readonly Geometry[] Cups =
     [
@@ -69,7 +70,8 @@ public sealed class VoiceIcon : FrameworkElement
             case VoiceGlyph.Mic:
             case VoiceGlyph.MicOff:
                 dc.DrawGeometry(fill, null, MicBody);
-                dc.DrawGeometry(null, pen, MicHolder);
+                // у значка в десяток пикселей ножка и подставка сливаются в шум, остаётся одна дуга
+                dc.DrawGeometry(null, pen, size < TinyBelow ? MicArc : MicHolder);
                 break;
             case VoiceGlyph.Headset:
             case VoiceGlyph.HeadsetOff:

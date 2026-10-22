@@ -52,12 +52,13 @@ public enum AvatarStatus
 /// <summary>Круглая аватарка с кольцом, которое вспыхивает, пока человек говорит, и значком выключенного звука.</summary>
 public sealed class Avatar : FrameworkElement
 {
-    const double RingRoom = 2.4, RingWidth = 2.2, DimmedOpacity = 0.45;
-    const double BadgeShare = 0.44, BadgeOffset = 0.62, BadgeCut = 0.9, GlyphShare = 0.8, BadgeStroke = 2.6;
+    // Размеры подобраны целыми пикселями: у крошечной аватарки любая дробная граница даёт мыло или лесенку
+    const double RingRoom = 2, RingWidth = 2, DimmedOpacity = 0.45;
+    const double BadgeShare = 0.46, BadgeOffset = 0.62, BadgeCut = 1, GlyphShare = 0.8, BadgeStroke = 3.2;
     static readonly Color Speak = Color.FromRgb(0x30, 0xD1, 0x58);
     static readonly Brush RingBrush = Frozen(new SolidColorBrush(Speak));
     static readonly Brush WarningBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)));
-    const double LiveWidthShare = 0.5, LiveHeightShare = 0.235, LiveInsetX = 0.03, LiveInsetY = 0.07, LiveRadius = 2, LiveTextShare = 0.78;
+    const double LiveWidthShare = 0.5, LiveHeightShare = 0.235, LiveInsetX = 0.03, LiveInsetY = 0.07, LiveCut = 0.9, LiveRadius = 2, LiveTextShare = 0.78;
     static readonly Typeface LetterFace = new("Segoe UI Semibold");
     static readonly Typeface LiveFace = new(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
 
@@ -81,12 +82,14 @@ public sealed class Avatar : FrameworkElement
 
     readonly Spring _ring = new(0, 420, 16);
     readonly FrameLoop _loop;
-    ImageSource? _image;
+    ImageBrush? _picture;
 
     public Avatar()
     {
         _loop = new FrameLoop(Advance);
         IsHitTestVisible = false;
+        // Картинка 128 px уменьшается в пять раз: билинейный режим по умолчанию даёт рябь, Fant усредняет честно
+        RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.HighQuality);
     }
 
     public string? Source
@@ -130,11 +133,13 @@ public sealed class Avatar : FrameworkElement
 
     void Load()
     {
-        _image = AvatarImages.Get(Source, () => Dispatcher.BeginInvoke(() =>
-        {
-            _image = AvatarImages.Get(Source, () => { });
-            InvalidateVisual();
-        }));
+        Show(AvatarImages.Get(Source, () => Dispatcher.BeginInvoke(() => Show(AvatarImages.Get(Source, () => { })))));
+    }
+
+    void Show(ImageSource? image)
+    {
+        // кисть на эллипсе сглаживает край круга, а вырез клипом оставлял бы лесенку
+        _picture = image is null ? null : new ImageBrush(image) { Stretch = Stretch.UniformToFill };
         InvalidateVisual();
     }
 
@@ -166,11 +171,9 @@ public sealed class Avatar : FrameworkElement
         double radius = size / 2 - RingRoom;
         if (Dimmed) dc.PushOpacity(DimmedOpacity);
 
-        if (_image is { } image)
+        if (_picture is { } picture)
         {
-            dc.PushClip(new EllipseGeometry(centre, radius, radius));
-            dc.DrawImage(image, new Rect(centre.X - radius, centre.Y - radius, radius * 2, radius * 2));
-            dc.Pop();
+            dc.DrawEllipse(picture, null, centre, radius, radius);
         }
         else
         {
@@ -195,7 +198,7 @@ public sealed class Avatar : FrameworkElement
     {
         double width = size * LiveWidthShare, height = size * LiveHeightShare;
         var plate = new Rect(centre.X - size / 2 + size * LiveInsetX, centre.Y - size / 2 + size * LiveInsetY, width, height);
-        dc.DrawRoundedRectangle(Brushes.Black, null, Rect.Inflate(plate, BadgeCut, BadgeCut), LiveRadius + BadgeCut, LiveRadius + BadgeCut);
+        dc.DrawRoundedRectangle(Brushes.Black, null, Rect.Inflate(plate, LiveCut, LiveCut), LiveRadius + LiveCut, LiveRadius + LiveCut);
         dc.DrawRoundedRectangle(WarningBrush, null, plate, LiveRadius, LiveRadius);
 
         var text = new FormattedText("LIVE", CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, LiveFace,
@@ -206,11 +209,11 @@ public sealed class Avatar : FrameworkElement
     /// <summary>Чёрный кружок с красным перечёркнутым значком: вырезает кромку аватарки, чтобы значок читался.</summary>
     void DrawBadge(DrawingContext dc, Point centre, double radius, double size)
     {
-        double badge = size * BadgeShare;
-        var middle = new Point(centre.X + radius * BadgeOffset, centre.Y + radius * BadgeOffset);
+        double badge = Math.Round(size * BadgeShare / 2) * 2;
+        var middle = new Point(Math.Round(centre.X + radius * BadgeOffset), Math.Round(centre.Y + radius * BadgeOffset));
         dc.DrawEllipse(Brushes.Black, null, middle, badge / 2 + BadgeCut, badge / 2 + BadgeCut);
 
-        double glyph = badge * GlyphShare;
+        double glyph = Math.Round(badge * GlyphShare / 2) * 2;
         VoiceGlyph kind = Status == AvatarStatus.Deafened ? VoiceGlyph.HeadsetOff : VoiceGlyph.MicOff;
         VoiceIcon.Draw(dc, kind, WarningBrush, middle.X - glyph / 2, middle.Y - glyph / 2, glyph, BadgeStroke);
     }
