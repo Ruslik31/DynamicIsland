@@ -11,8 +11,9 @@ namespace DynamicIsland;
 
 public partial class MainWindow
 {
-    const double VoiceAvatarSize = 28, VoiceOverflowWidth = 26;
-    const double VoiceWidthPadding = 6 + 10 + 17 + 13;
+    // Аватарка почти во всю высоту пилюли (34); по 6 с краёв оставляют место значку на правом нижнем краю последней
+    const double VoiceAvatarSize = 32, VoiceOverflowWidth = 26;
+    const double VoiceWidthPadding = 12;
     const double VoiceRowHeight = 38, VoiceRowAvatar = 32, VoiceMoreHeight = 24;
     const double VoiceBigChrome = 132;
     const int VoiceBigRows = 6, VolumeStepPercent = 5;
@@ -24,7 +25,7 @@ public partial class MainWindow
     readonly Dictionary<string, Avatar> _compactAvatars = [];
     readonly Dictionary<string, Avatar> _bigAvatars = [];
     readonly Dictionary<string, TextBlock> _rowVolumes = [];
-    double _voiceWidth = 92;
+    double _voiceWidth = 64;
     string _compactKey = "";
     int _shownVoiceSeconds = -1;
     Action? _messageOpen;
@@ -45,7 +46,9 @@ public partial class MainWindow
 
     void StartDiscord()
     {
-        _discord.Start();
+        string[] args = Environment.GetCommandLineArgs();
+        if (args.Contains("--demo")) _discord.StartDemo(args.Contains("--demo-message"));
+        else _discord.Start();
         SyncVoice();
         SyncDiscordTexts();
         SyncDiscordSwitches(false);
@@ -128,7 +131,6 @@ public partial class MainWindow
         bool lit = on && Settings.DiscordSpeaking;
         if (_compactAvatars.TryGetValue(userId, out Avatar? small)) small.Speaking = lit;
         if (_bigAvatars.TryGetValue(userId, out Avatar? big)) big.Speaking = lit;
-        if (_discord.Voice.Members.FirstOrDefault(member => member.Self)?.Id == userId) SyncVoiceStateIcon();
         if (on && !_compactAvatars.ContainsKey(userId)) SyncVoiceCompact();
     }
 
@@ -142,23 +144,20 @@ public partial class MainWindow
     void SyncVoiceCompact()
     {
         VoiceMember[] members = [.. _discord.Voice.Members];
+        VoiceMember? me = members.FirstOrDefault(member => member.Self);
         VoiceMember[] others = [.. members.Where(member => !member.Self)];
-        int limit = Settings.DiscordAvatarCount;
-        VoiceMember[] shown = others.Length == 0 ? [.. members.Take(1)] : ChooseShown(others, limit);
-        int extra = Math.Max(others.Length - shown.Length, 0);
+        // «Аватарок в острове» считает и мою: остальные места занимают другие участники, моя всегда крайняя справа
+        VoiceMember[] shown = ChooseShown(others, Math.Max(Settings.DiscordAvatarCount - (me is null ? 0 : 1), 0));
+        int extra = others.Length - shown.Length;
+        VoiceMember[] strip = me is null ? shown : [.. shown, me];
 
-        string key = string.Join(',', shown.Select(member => member.Id + "|" + member.Avatar)) + "+" + extra;
+        string key = string.Join(',', strip.Select(member => member.Id + "|" + member.Avatar)) + "+" + extra;
         if (key != _compactKey)
         {
             _compactKey = key;
             VoiceAvatars.Children.Clear();
             _compactAvatars.Clear();
-            foreach (VoiceMember member in shown)
-            {
-                var avatar = new Avatar { Width = VoiceAvatarSize, Height = VoiceAvatarSize, Source = member.Avatar, Label = member.Name };
-                _compactAvatars[member.Id] = avatar;
-                VoiceAvatars.Children.Add(avatar);
-            }
+            foreach (VoiceMember member in shown) AddCompactAvatar(member);
             if (extra > 0)
             {
                 VoiceAvatars.Children.Add(new TextBlock
@@ -167,7 +166,9 @@ public partial class MainWindow
                     Width = VoiceOverflowWidth, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 });
             }
-            double width = Math.Max(PillShapes[View.Voice].Width, VoiceWidthPadding + shown.Length * VoiceAvatarSize + (extra > 0 ? VoiceOverflowWidth : 0));
+            if (me is not null) AddCompactAvatar(me);
+
+            double width = Math.Max(PillShapes[View.Voice].Width, VoiceWidthPadding + strip.Length * VoiceAvatarSize + (extra > 0 ? VoiceOverflowWidth : 0));
             if (width != _voiceWidth)
             {
                 _voiceWidth = width;
@@ -175,13 +176,27 @@ public partial class MainWindow
             }
         }
 
-        foreach (VoiceMember member in shown)
+        foreach (VoiceMember member in strip)
         {
             if (!_compactAvatars.TryGetValue(member.Id, out Avatar? avatar)) continue;
             avatar.Speaking = Settings.DiscordSpeaking && _discord.IsSpeaking(member.Id);
-            avatar.Dimmed = member.SelfDeaf || member.Deaf;
+            avatar.Status = StatusOf(member);
         }
-        SyncVoiceStateIcon();
+    }
+
+    void AddCompactAvatar(VoiceMember member)
+    {
+        var avatar = new Avatar { Width = VoiceAvatarSize, Height = VoiceAvatarSize, Source = member.Avatar, Label = member.Name };
+        _compactAvatars[member.Id] = avatar;
+        VoiceAvatars.Children.Add(avatar);
+    }
+
+    /// <summary>Свой микрофон и наушники берём у клиента: он меняется раньше, чем приходит состояние в канале.</summary>
+    AvatarStatus StatusOf(VoiceMember member)
+    {
+        bool deaf = member.Self ? _discord.Voice.SelfDeaf : member.SelfDeaf || member.Deaf;
+        bool muted = member.Self ? _discord.Voice.SelfMute : member.SelfMute || member.Mute;
+        return deaf ? AvatarStatus.Deafened : muted ? AvatarStatus.Muted : AvatarStatus.None;
     }
 
     VoiceMember[] ChooseShown(VoiceMember[] others, int limit)
@@ -194,15 +209,6 @@ public partial class MainWindow
             shown[slot] = talker;
         }
         return [.. shown];
-    }
-
-    void SyncVoiceStateIcon()
-    {
-        VoiceState voice = _discord.Voice;
-        bool deaf = voice.SelfDeaf, muted = voice.SelfMute;
-        bool talking = voice.Members.FirstOrDefault(member => member.Self) is { } me && _discord.IsSpeaking(me.Id) && Settings.DiscordSpeaking;
-        VoiceStateIcon.Kind = deaf ? VoiceGlyph.HeadsetOff : muted ? VoiceGlyph.MicOff : VoiceGlyph.Mic;
-        VoiceStateIcon.Fill = deaf || muted ? _red : talking ? _green : _dim;
     }
 
     void SyncVoiceBig()
@@ -256,7 +262,7 @@ public partial class MainWindow
         {
             Width = VoiceRowAvatar, Height = VoiceRowAvatar, Source = member.Avatar, Label = member.Name,
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(8, 0, 0, 0), Dimmed = member.SelfDeaf || member.Deaf,
+            Margin = new Thickness(8, 0, 0, 0), Status = StatusOf(member),
             Speaking = Settings.DiscordSpeaking && _discord.IsSpeaking(member.Id),
         };
         _bigAvatars[member.Id] = avatar;
@@ -285,8 +291,6 @@ public partial class MainWindow
         };
         if (member.Stream) status.Children.Add(Chip("LIVE", _red));
         if (member.Video) status.Children.Add(StatusIcon(VoiceGlyph.Screen, _dim));
-        if (member.SelfDeaf || member.Deaf) status.Children.Add(StatusIcon(VoiceGlyph.HeadsetOff, _red));
-        else if (member.SelfMute || member.Mute) status.Children.Add(StatusIcon(VoiceGlyph.MicOff, _red));
         row.Children.Add(status);
         return row;
     }

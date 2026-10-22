@@ -56,7 +56,7 @@ public partial class MainWindow : Window
         [View.Update] = new(320, 150, 34),
         [View.Lyrics] = new(352, 312, 34),
         [View.Loading] = new(118, 34, 17),
-        [View.Voice] = new(92, 34, 17),
+        [View.Voice] = new(64, 34, 17),
         [View.VoiceBig] = new(360, 170, 38),
         [View.Message] = new(340, 72, 31),
         [View.Discord] = new(320, 254, 34),

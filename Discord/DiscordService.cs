@@ -69,6 +69,46 @@ sealed class DiscordService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Демо без Discord: выдуманный звонок с разными состояниями участников для отладки внешнего вида и скриншотов.
+    /// Мост не запускается, поэтому кнопки в таком звонке ничего не делают.
+    /// </summary>
+    public void StartDemo(bool withMessage)
+    {
+        const string Defaults = "https://cdn.discordapp.com/embed/avatars/";
+        VoiceMember Member(string id, string name, int avatar, bool self = false, bool mute = false, bool deaf = false, bool stream = false) =>
+            new(id, name, $"{Defaults}{avatar}.png", self, mute, deaf, false, false, stream, false, false, 100, false);
+
+        Started = Linked = true;
+        PluginVersion = "демо";
+        Me = new DiscordUser("1", "Вы", $"{Defaults}0.png");
+        JoinedAt = DateTime.Now.AddMinutes(-12).AddSeconds(-34);
+        Voice = new VoiceState(
+            new VoiceChannel("10", "Общий голосовой", "20", "Демо-сервер", 2),
+            [
+                Member("2", "Маша", 1, mute: true),
+                Member("3", "Дима", 2, deaf: true),
+                Member("4", "Лена", 3, stream: true),
+                Member("5", "Артём", 4),
+                Member("1", "Вы", 0, self: true),
+            ],
+            false, false);
+        _speaking.Add("4");
+        LinkChanged?.Invoke();
+        VoiceChanged?.Invoke();
+
+        if (!withMessage) return;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            MessageReceived?.Invoke(new ChatMessage("1", "dm", false, "30", null, "", null, true,
+                new MessageAuthor("2", "Маша", $"{Defaults}1.png", false), "Привет! Идёшь в звонок? Мы уже все собрались",
+                [], 0, 0, null, false, null));
+        };
+        timer.Start();
+    }
+
     public void ToggleMute() => _bridge.ToggleMute();
 
     public void ToggleDeafen() => _bridge.ToggleDeafen();

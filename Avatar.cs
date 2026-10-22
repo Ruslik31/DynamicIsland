@@ -44,12 +44,19 @@ static class AvatarImages
     }
 }
 
-/// <summary>Круглая аватарка с кольцом, которое вспыхивает, пока человек говорит.</summary>
+public enum AvatarStatus
+{
+    None, Muted, Deafened,
+}
+
+/// <summary>Круглая аватарка с кольцом, которое вспыхивает, пока человек говорит, и значком выключенного звука.</summary>
 public sealed class Avatar : FrameworkElement
 {
     const double RingRoom = 2.4, RingWidth = 2.2;
+    const double BadgeShare = 0.44, BadgeOffset = 0.62, BadgeCut = 0.9, GlyphShare = 0.8, BadgeStroke = 2.6;
     static readonly Color Speak = Color.FromRgb(0x30, 0xD1, 0x58);
     static readonly Brush RingBrush = Frozen(new SolidColorBrush(Speak));
+    static readonly Brush WarningBrush = Frozen(new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)));
     static readonly Typeface LetterFace = new("Segoe UI Semibold");
 
     public static readonly DependencyProperty SourceProperty = DependencyProperty.Register(
@@ -61,8 +68,8 @@ public sealed class Avatar : FrameworkElement
     public static readonly DependencyProperty SpeakingProperty = DependencyProperty.Register(
         nameof(Speaking), typeof(bool), typeof(Avatar), new FrameworkPropertyMetadata(false, (d, _) => ((Avatar)d).Pulse()));
 
-    public static readonly DependencyProperty DimmedProperty = DependencyProperty.Register(
-        nameof(Dimmed), typeof(bool), typeof(Avatar), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty StatusProperty = DependencyProperty.Register(
+        nameof(Status), typeof(AvatarStatus), typeof(Avatar), new FrameworkPropertyMetadata(AvatarStatus.None, FrameworkPropertyMetadataOptions.AffectsRender));
 
     readonly Spring _ring = new(0, 420, 16);
     readonly FrameLoop _loop;
@@ -92,11 +99,11 @@ public sealed class Avatar : FrameworkElement
         set => SetValue(SpeakingProperty, value);
     }
 
-    /// <summary>Приглушённая аватарка: человек отключил микрофон или наушники.</summary>
-    public bool Dimmed
+    /// <summary>Значок на нижнем правом краю, как в Discord: микрофон или наушники выключены.</summary>
+    public AvatarStatus Status
     {
-        get => (bool)GetValue(DimmedProperty);
-        set => SetValue(DimmedProperty, value);
+        get => (AvatarStatus)GetValue(StatusProperty);
+        set => SetValue(StatusProperty, value);
     }
 
     void Load()
@@ -135,7 +142,6 @@ public sealed class Avatar : FrameworkElement
 
         var centre = new Point(ActualWidth / 2, ActualHeight / 2);
         double radius = size / 2 - RingRoom;
-        if (Dimmed) dc.PushOpacity(0.45);
 
         if (_image is { } image)
         {
@@ -148,7 +154,6 @@ public sealed class Avatar : FrameworkElement
             dc.DrawEllipse(Frozen(new SolidColorBrush(ColorFor(Label))), null, centre, radius, radius);
             DrawLetter(dc, centre, radius);
         }
-        if (Dimmed) dc.Pop();
 
         double ring = Math.Clamp(_ring.Value, 0, 1.25);
         if (ring > 0.02)
@@ -157,6 +162,19 @@ public sealed class Avatar : FrameworkElement
             double reach = size / 2 - RingWidth * ring / 2;
             dc.DrawEllipse(null, pen, centre, reach, reach);
         }
+        if (Status != AvatarStatus.None) DrawBadge(dc, centre, radius, size);
+    }
+
+    /// <summary>Чёрный кружок с красным перечёркнутым значком: вырезает кромку аватарки, чтобы значок читался.</summary>
+    void DrawBadge(DrawingContext dc, Point centre, double radius, double size)
+    {
+        double badge = size * BadgeShare;
+        var middle = new Point(centre.X + radius * BadgeOffset, centre.Y + radius * BadgeOffset);
+        dc.DrawEllipse(Brushes.Black, null, middle, badge / 2 + BadgeCut, badge / 2 + BadgeCut);
+
+        double glyph = badge * GlyphShare;
+        VoiceGlyph kind = Status == AvatarStatus.Deafened ? VoiceGlyph.HeadsetOff : VoiceGlyph.MicOff;
+        VoiceIcon.Draw(dc, kind, WarningBrush, middle.X - glyph / 2, middle.Y - glyph / 2, glyph, BadgeStroke);
     }
 
     void DrawLetter(DrawingContext dc, Point centre, double radius)

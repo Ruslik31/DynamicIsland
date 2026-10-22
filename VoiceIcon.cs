@@ -49,24 +49,32 @@ public sealed class VoiceIcon : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
-        double scale = Math.Min(ActualWidth, ActualHeight) / Grid;
+        double size = Math.Min(ActualWidth, ActualHeight);
+        if (size <= 0) return;
+        Draw(dc, Kind, Fill, (ActualWidth - size) / 2, (ActualHeight - size) / 2, size);
+    }
+
+    /// <summary>Рисует значок в квадрате со стороной <paramref name="size"/>; мелким значкам нужна толще линия.</summary>
+    internal static void Draw(DrawingContext dc, VoiceGlyph kind, Brush fill, double left, double top, double size, double stroke = Stroke)
+    {
+        double scale = size / Grid;
         if (scale <= 0) return;
 
-        dc.PushTransform(new TranslateTransform((ActualWidth - Grid * scale) / 2, (ActualHeight - Grid * scale) / 2));
+        dc.PushTransform(new TranslateTransform(left, top));
         dc.PushTransform(new ScaleTransform(scale, scale));
-        var pen = new Pen(Fill, Stroke) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round };
+        var pen = new Pen(fill, stroke) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round };
 
-        switch (Kind)
+        switch (kind)
         {
             case VoiceGlyph.Mic:
             case VoiceGlyph.MicOff:
-                dc.DrawGeometry(Fill, null, MicBody);
+                dc.DrawGeometry(fill, null, MicBody);
                 dc.DrawGeometry(null, pen, MicHolder);
                 break;
             case VoiceGlyph.Headset:
             case VoiceGlyph.HeadsetOff:
                 dc.DrawGeometry(null, pen, HeadBand);
-                foreach (Geometry cup in Cups) dc.DrawGeometry(Fill, null, cup);
+                foreach (Geometry cup in Cups) dc.DrawGeometry(fill, null, cup);
                 break;
             case VoiceGlyph.Screen:
                 dc.DrawGeometry(null, pen, ScreenFrame);
@@ -74,9 +82,10 @@ public sealed class VoiceIcon : FrameworkElement
                 break;
         }
 
-        if (Kind is VoiceGlyph.MicOff or VoiceGlyph.HeadsetOff)
+        if (kind is VoiceGlyph.MicOff or VoiceGlyph.HeadsetOff)
         {
-            dc.DrawGeometry(null, new Pen(Brushes.Black, Knockout) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, Slash);
+            double wide = Knockout + (stroke - Stroke) * 2;
+            dc.DrawGeometry(null, new Pen(Brushes.Black, wide) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round }, Slash);
             dc.DrawGeometry(null, pen, Slash);
         }
         dc.Pop();
