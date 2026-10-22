@@ -36,11 +36,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git fetch origin "+refs/tags/${env:TAG}:refs/tags/${env:TAG}"
+          $assets = @('out/DiscordIsland.exe', 'plugin/DiscordIslandBridge.plugin.js')
           $notes = @()
           if ((git cat-file -t $env:TAG) -eq 'tag') { $notes = @(git tag -l --format='%(contents)' $env:TAG) }
-          if ("$notes".Trim()) {
-            $notes | Set-Content notes.md -Encoding utf8
-            gh release create $env:TAG out/DiscordIsland.exe --title "Discord Island $env:TAG" --notes-file notes.md
+          $hasNotes = "$notes".Trim().Length -gt 0
+          if ($hasNotes) { $notes | Set-Content notes.md -Encoding utf8 }
+
+          # Релиз мог уже быть создан вручную: тогда дополняем его файлами, а не падаем
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG @assets --clobber
+            if ($hasNotes) { gh release edit $env:TAG --notes-file notes.md }
+          } elseif ($hasNotes) {
+            gh release create $env:TAG @assets --title "Discord Island $env:TAG" --notes-file notes.md
           } else {
-            gh release create $env:TAG out/DiscordIsland.exe --title "Discord Island $env:TAG" --generate-notes
+            gh release create $env:TAG @assets --title "Discord Island $env:TAG" --generate-notes
           }

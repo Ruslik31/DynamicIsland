@@ -1,8 +1,11 @@
 /**
  * @name DiscordIslandBridge
  * @author Ruslik31
- * @description Передаёт в Dynamic Island состояние голосового канала, кто говорит и уведомления о сообщениях. Работает только локально (127.0.0.1), токен аккаунта не используется.
- * @version 0.1.1
+ * @authorLink https://github.com/Ruslik31
+ * @description Передаёт в Discord Island состояние голосового канала, кто говорит и уведомления о сообщениях. Работает только локально (127.0.0.1), токен аккаунта не используется.
+ * @version 1.1.0
+ * @source https://github.com/Ruslik31/DynamicIsland/blob/discord-island/plugin/DiscordIslandBridge.plugin.js
+ * @website https://github.com/Ruslik31/DynamicIsland/releases/latest
  */
 
 const PLUGIN = "DiscordIslandBridge";
