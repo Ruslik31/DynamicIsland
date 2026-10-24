@@ -65,7 +65,7 @@ static class Settings
     const int MaxPosition = 4000;
     static int _position = Math.Clamp(Read(nameof(Position), 0), -MaxPosition, MaxPosition);
     static bool _discordMusicBubble = ReadSwitch(nameof(DiscordMusicBubble)), _discordMusicMini = ReadSwitch(nameof(DiscordMusicMini), false);
-    static bool _music = ReadSwitch(nameof(Music), false);
+    static bool _music = ReadSwitch(nameof(Music));
     static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
     static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), false), _discordInGames = ReadSwitch(nameof(DiscordInGames));
     static bool _discordDm = ReadSwitch(nameof(DiscordDm)), _discordMention = ReadSwitch(nameof(DiscordMention));
@@ -94,7 +94,7 @@ static class Settings
     static int _gap = Math.Clamp(Read(nameof(Gap), DefaultGap), 0, MaxGap);
     static int _accent = Read(nameof(Accent), 0);
 
-    /// <summary>Музыкальный плеер острова. Остров теперь про Discord, поэтому по умолчанию выключен.</summary>
+    /// <summary>Музыкальный плеер острова: по умолчанию включён, его можно выключить в настройках.</summary>
     public static bool Music
     {
         get => _music;
