@@ -73,7 +73,7 @@ public partial class MainWindow
         bool record = _obs.Recording && _view != View.Record;
         bool timer = _countdown.IsActive && _view != View.Timer, shelf = _shelf.Items.Count > 0;
         bool split = compact && (music || record || timer || shelf);
-        _musicBubbleWidth.Target = Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth;
+        _musicBubbleWidth.Target = Settings.DiscordMusicMini ^ _bubbleDropArmed ? MusicMiniWidth : MusicBubbleWidth;
         _bubbleSplit.Target = split ? 1 : 0;
         if (compact) _bubbleSplit.Tune(140, 17);
         else _bubbleSplit.Tune(300, 30);

@@ -82,7 +82,9 @@ public partial class MainWindow
         }
         if (_media.IsPlaying || turned) _lastPlayedAt = DateTime.UtcNow;
 
-        if (Settings.Music && (turned || (newTrack && _media.IsPlaying))) ShowTransient(View.Toast, ToastSeconds);
+        // в звонке новый трек показывает сам пузырь музыки (его обложка меняется), а тост на три секунды втягивал бы пузырь в остров
+        bool bubbleShowsIt = ShowsVoice && Settings.DiscordMusicBubble;
+        if (Settings.Music && !bubbleShowsIt && (turned || (newTrack && _media.IsPlaying))) ShowTransient(View.Toast, ToastSeconds);
         TrackLyrics();
         UpdateView();
         UpdateLyric();

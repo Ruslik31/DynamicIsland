@@ -24,8 +24,8 @@ public partial class MainWindow
     bool _ringing, _urgent;
     bool _pauseIconShown = true;
     int _setupMinutes = 25, _shownSeconds = -1;
-    const double MaxBubbleDragShare = 0.5, MaxBubbleDragBack = 24;
-    bool _bubbleHovered, _bubblePressed, _bubbleDragging;
+    const double MaxBubbleDragBack = 24, BubbleDragExtra = 8, BubbleDropShare = 0.6;
+    bool _bubbleHovered, _bubblePressed, _bubbleDragging, _bubbleDropArmed;
     double _bubbleDownX;
     Panel _bubbleDownPanel;
 
@@ -230,8 +230,19 @@ public partial class MainWindow
         if (!_bubbleDragging && Math.Abs(moved) < DragThreshold) return;
 
         _bubbleDragging = true;
-        double toIsland = ShapeOf(_view).Width * MaxBubbleDragShare + BubbleGap + Bubble.Width;
-        _bubbleDrag.Target = Math.Clamp(moved, -toIsland, MaxBubbleDragBack);
+
+        // Пузырь можно лишь прижать к острову, с «резиновым» сопротивлением: уйдя целиком в тело острова, он слился бы с ним и пропал бы из виду
+        double reach = BubbleGap + Bubble.Width / 2 + BubbleDragExtra;
+        double pull = RubberBand(Math.Max(-moved, 0), reach);
+        _bubbleDrag.Target = -pull + Math.Min(Math.Max(moved, 0), MaxBubbleDragBack);
+
+        // дотянули достаточно: пузырь уже показывает, каким станет, и если отпустить, останется таким
+        bool armed = pull >= reach * BubbleDropShare;
+        if (armed != _bubbleDropArmed)
+        {
+            _bubbleDropArmed = armed;
+            UpdateTargets();
+        }
         StartShapeLoop();
     }
 
@@ -241,9 +252,8 @@ public partial class MainWindow
         e.Handled = true;
 
         // ReleaseMouseCapture сразу вызывает LostMouseCapture, который сбрасывает перетаскивание: сначала запоминаем, чем всё кончилось
-        bool dragged = _bubbleDragging;
-        bool dropped = dragged && _bubbleDrag.Target <= -(BubbleGap + Bubble.Width / 2);
-        _bubblePressed = _bubbleDragging = false;
+        bool dragged = _bubbleDragging, dropped = dragged && _bubbleDropArmed;
+        _bubblePressed = _bubbleDragging = _bubbleDropArmed = false;
         Bubble.ReleaseMouseCapture();
 
         if (dragged)
@@ -264,7 +274,7 @@ public partial class MainWindow
     void Bubble_LostMouseCapture(object sender, MouseEventArgs e)
     {
         if (!_bubbleDragging) return;
-        _bubbleDragging = _bubblePressed = false;
+        _bubbleDragging = _bubblePressed = _bubbleDropArmed = false;
         _bubbleDrag.Target = 0;
         UpdateTargets();
     }
