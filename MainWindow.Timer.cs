@@ -257,6 +257,7 @@ public partial class MainWindow
         SelectPanel(BubblePanelAt(e.GetPosition(Bubble).X));
         UpdateView();
         UpdateTargets();
+        BeginGrowFromBubble();
         _collapseTimeout.Start(LongCollapseDelay);
     }
 

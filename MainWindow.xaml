@@ -460,7 +460,10 @@
               MouseEnter="Island_MouseEnter" MouseLeave="Island_MouseLeave"
               LostMouseCapture="Island_LostMouseCapture">
             <Grid.RenderTransform>
-                <ScaleTransform x:Name="IslandScale"/>
+                <TransformGroup>
+                    <ScaleTransform x:Name="IslandScale"/>
+                    <TranslateTransform x:Name="IslandShift"/>
+                </TransformGroup>
             </Grid.RenderTransform>
 
             <Path x:Name="Shadow" Fill="Black" Opacity="0" IsHitTestVisible="False"

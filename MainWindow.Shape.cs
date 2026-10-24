@@ -37,7 +37,10 @@ public partial class MainWindow
     readonly Spring[] _springs;
     Rect _clipRect = Rect.Empty;
     double _clipRadius, _baseLeft;
-    bool _morphing;
+    bool _morphing, _growing;
+    double _growBubbleX;
+    Rect _pillRect = Rect.Empty, _bubbleRect = Rect.Empty, _growFrom = Rect.Empty;
+    readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24);
 
     void UpdateTargets()
     {
@@ -137,7 +140,11 @@ public partial class MainWindow
         bool moving = false;
         foreach (Spring spring in _springs) moving |= spring.Advance(dt);
         ApplyShape();
-        if (!moving) EndMorph();
+        if (!moving)
+        {
+            EndMorph();
+            EndGrowFromBubble();
+        }
         return moving || IsLyricSettling;
     }
 
@@ -149,6 +156,8 @@ public partial class MainWindow
         double scale = Math.Max(_scale.Value, MinScale), size = Math.Max(_userScale.Value, MinScale);
         double dpi = VisualTreeHelper.GetDpi(this).DpiScaleY;
 
+        _pillRect = pill;
+        IslandShift.X = _islandShift.Value;
         Pill.Width = w;
         Pill.Height = h;
         Pill.CornerRadius = new CornerRadius(r);
@@ -290,15 +299,59 @@ public partial class MainWindow
         BubbleShelf.Opacity = Math.Clamp(shelf * 2 - 1, 0, 1);
         BubbleShelf.Margin = new Thickness(0, 0, ShelfBubblePadding + (ShelfBubblePaddingWithTimer - ShelfBubblePadding) * Math.Clamp(Math.Max(timer, record), 0, 1), 0);
         double tuck = Math.Max(r - Bubble.Height / 2, 0) * BubbleTuckFactor * (1 - Math.Clamp(split, 0, 1)) * scale;
-        BubbleMove.X = (pill.Width * scale - wide) / 2 + (BubbleGap + wide) * split - tuck + _bubbleDrag.Value;
+        BubbleMove.X = _growing ? _growBubbleX : (pill.Width * scale - wide) / 2 + (BubbleGap + wide) * split - tuck + _bubbleDrag.Value;
         BubbleScale.ScaleX = BubbleScale.ScaleY = bubble;
-        BubbleBody.Opacity = Math.Clamp(split * 4 - 3, 0, 1);
-        Bubble.IsHitTestVisible = split > BubbleClickableSplit;
+        BubbleBody.Opacity = _growing ? Math.Clamp(1 - _bubbleGrow.Value * 4, 0, 1) : Math.Clamp(split * 4 - 3, 0, 1);
+        Bubble.IsHitTestVisible = split > BubbleClickableSplit && !_growing;
 
         double past = ((BubbleGap + wide) * split - wide - tuck + _bubbleDrag.Value) / scale;
-        Body.SetShape(pill, r, apart
-            ? new Rect(pill.Right + past, 0, wide * bubble / scale, Bubble.Height * bubble / scale)
-            : Rect.Empty);
+        Rect shape = apart ? new Rect(pill.Right + past, 0, wide * bubble / scale, Bubble.Height * bubble / scale) : Rect.Empty;
+        if (_growing) shape = SwallowedPill(pill, scale);
+        else _bubbleRect = shape;
+        Body.SetShape(pill, r, shape);
+    }
+
+    /// <summary>
+    /// Нажали на пузырь, и остров открывается из него: растущая форма стартует на месте пузыря и едет к центру,
+    /// а прежняя пилюля втягивается в неё, как капля. Вызывать после того, как вид уже выбран.
+    /// </summary>
+    void BeginGrowFromBubble()
+    {
+        if (_bubbleRect.IsEmpty || _pillRect.IsEmpty || ShapeOf(_view).Height < CompactMaxHeight) return;
+
+        double scale = Math.Max(_scale.Value, MinScale);
+        Rect bubble = _bubbleRect;
+        _growFrom = _pillRect;
+        _growBubbleX = BubbleMove.X;
+        _growing = true;
+
+        // остров начинает как пузырь: тот же размер и то же место, а прежний размер пилюли остаётся в «капле»
+        _width.Snap(bubble.Width);
+        _height.Snap(Math.Max(bubble.Height, MinPillSize));
+        _radius.Snap(bubble.Height / 2);
+        _islandShift.Snap(((bubble.X + bubble.Width / 2) - (_growFrom.X + _growFrom.Width / 2)) * scale);
+        _islandShift.Target = 0;
+        _bubbleGrow.Snap(0);
+        _bubbleGrow.Target = 1;
+        StartShapeLoop();
+    }
+
+    void EndGrowFromBubble()
+    {
+        if (!_growing) return;
+        _growing = false;
+        _bubbleGrow.Snap(0);
+        _islandShift.Snap(0);
+    }
+
+    /// <summary>Прежняя пилюля стоит на месте, пока остров сдвинут, и стягивается к растущей форме.</summary>
+    Rect SwallowedPill(Rect pill, double scale)
+    {
+        double e = Math.Clamp(_bubbleGrow.Value, 0, 1), shift = _islandShift.Value / scale;
+        var old = new Rect(_growFrom.X - shift, _growFrom.Y, _growFrom.Width, _growFrom.Height);
+        return new Rect(
+            old.X + (pill.X - old.X) * e, old.Y + (pill.Y - old.Y) * e,
+            old.Width + (pill.Width - old.Width) * e, old.Height + (pill.Height - old.Height) * e);
     }
 
     void FitViews(double w, double h)
@@ -321,6 +374,7 @@ public partial class MainWindow
     {
         if (!_morphing || _grab == Grab.Pull) return;
         _morphing = false;
+        EndGrowFromBubble();
         foreach (FrameworkElement view in _views.Values) FitView(view, 1, 0);
         Host.Effect = null;
     }
