@@ -60,7 +60,7 @@ public partial class MainWindow : Window
         [View.VoiceBig] = new(360, 170, 38),
         [View.Message] = new(340, 72, 31),
         [View.Discord] = new(320, 254, 34),
-        [View.DiscordVoice] = new(340, 256, 34),
+        [View.DiscordVoice] = new(340, 296, 34),
         [View.DiscordMessages] = new(340, 298, 34),
     };
 
@@ -115,7 +115,7 @@ public partial class MainWindow : Window
     View _view = View.Idle;
     View? _transientView;
     Panel _panel;
-    bool _hovered, _pressed, _hiddenByFullscreen, _sentAway;
+    bool _hovered, _pressed, _hiddenByFullscreen, _sentAway, _musicBubbleWanted;
     IntPtr _hwnd;
     int _ticks;
 
@@ -169,8 +169,8 @@ public partial class MainWindow : Window
         _spotSprings = [_coverLeft, _coverTop, _coverSize, _barsRight, _barsCenterY, _barsWidth, _barsHeight, _barsOpen];
         _springs =
         [
-            _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleRecord, _bubbleTimer, _bubbleShelf, _shelfBubbleWidth,
-            _shelfScroll, _lookScroll, _updateNotesScroll, _volumeOvershoot, _leanX, _coverScale, _coverSnapX, _coverSnapY, _lyricSnapX, _lyricSnapY, .. _spotSprings,
+            _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleDrag, _musicBubbleWidth, _bubbleMusic, _bubbleRecord, _bubbleTimer, _bubbleShelf, _shelfBubbleWidth,
+            _shelfScroll, _lookScroll, _updateNotesScroll, _volumeOvershoot, _moveX, _coverScale, _coverSnapX, _coverSnapY, _lyricSnapX, _lyricSnapY, .. _spotSprings,
         ];
         _timerTint = new SolidColorBrush(_orange.Color);
         _recordTint = new SolidColorBrush(_red.Color);
@@ -232,8 +232,8 @@ public partial class MainWindow : Window
         Shared.RenderTransform = CreateViewTransforms();
         ArtSpot.Clip = Squircle.Of(new Rect(0, 0, FullCoverSize, FullCoverSize), CoverRadius);
         LyricBox.CacheMode = _lyricCache;
-        Eq.Fill = _accentBrush;
-        Eq.Dots = Settings.Dots;
+        Eq.Fill = BubbleEq.Fill = _accentBrush;
+        Eq.Dots = BubbleEq.Dots = Settings.Dots;
         SeekLines.Accent = _accentBrush;
         PlayerMatrix.Rounding = PillShapes[View.MediaBig].Radius;
         SyncBackdrop();
@@ -324,8 +324,10 @@ public partial class MainWindow : Window
 
     void CenterOnScreen()
     {
-        Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
+        _baseLeft = (SystemParameters.PrimaryScreenWidth - Width) / 2;
+        Left = Math.Round(_baseLeft);
         Top = 0;
+        PlaceWindow(Math.Max(_width.Value, MinPillSize));
         _glass.Place();
     }
 
@@ -410,7 +412,7 @@ public partial class MainWindow : Window
             Panel.TimerSet => View.TimerSet,
             Panel.Record => _obs.Recording ? View.RecordBig : View.RecordSet,
             Panel.Timer when _countdown.IsActive => View.TimerBig,
-            Panel.Timer or Panel.Player => ShowsVoice ? View.VoiceBig : MusicOn ? View.MediaBig : View.IdleBig,
+            Panel.Timer or Panel.Player => MusicOn ? View.MediaBig : ShowsVoice ? View.VoiceBig : View.IdleBig,
             _ => _transientView ?? (_updater.State == Updater.Stage.Loading ? View.Loading
                 : ShowsVoice ? View.Voice : IsMediaActive ? View.Media : _obs.Recording ? View.Record : _countdown.IsActive ? View.Timer : View.Idle),
         };
@@ -422,6 +424,14 @@ public partial class MainWindow : Window
         View target = TargetView();
         bool changed = target != _view;
         if (changed) MorphTo(target);
+
+        // музыка начала или перестала играть в звонке: пузырь должен выйти из острова или влиться обратно
+        bool musicBubble = WantsMusicBubble();
+        if (musicBubble != _musicBubbleWanted)
+        {
+            _musicBubbleWanted = musicBubble;
+            UpdateTargets();
+        }
 
         SyncEq();
         SyncRim();

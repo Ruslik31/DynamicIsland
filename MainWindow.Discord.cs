@@ -436,6 +436,7 @@ public partial class MainWindow
         DiscordSpeakingSwitch.Set(Settings.DiscordSpeaking, animate);
         DiscordMovesSwitch.Set(Settings.DiscordMoves, animate);
         DiscordInGamesSwitch.Set(Settings.DiscordInGames, animate);
+        DiscordMusicBubbleSwitch.Set(Settings.DiscordMusicBubble, animate);
         DiscordAvatarsSegments.Set(Settings.DiscordAvatars, animate);
         DiscordDmSwitch.Set(Settings.DiscordDm, animate);
         DiscordMentionSwitch.Set(Settings.DiscordMention, animate);
@@ -476,6 +477,13 @@ public partial class MainWindow
         Settings.DiscordInGames = !Settings.DiscordInGames;
         UpdateSwitches(true);
         CheckFullscreen();
+    }
+
+    void DiscordMusicBubble_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.DiscordMusicBubble = !Settings.DiscordMusicBubble;
+        UpdateSwitches(true);
+        UpdateView();
     }
 
     void DiscordAvatars_Click(object sender, RoutedEventArgs e)

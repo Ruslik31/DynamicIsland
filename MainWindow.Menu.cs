@@ -235,7 +235,7 @@ public partial class MainWindow
 
     void Dots_Click(object sender, RoutedEventArgs e)
     {
-        Eq.Dots = Settings.Dots = DotsSegments.PickUnderPointer() == 1;
+        Eq.Dots = BubbleEq.Dots = Settings.Dots = DotsSegments.PickUnderPointer() == 1;
         RefreshLookPage();
     }
 

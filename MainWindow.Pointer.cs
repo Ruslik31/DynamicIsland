@@ -1,18 +1,19 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace DynamicIsland;
 
 public partial class MainWindow
 {
-    enum Grab { None, Held, Pull, Lean }
+    enum Grab { None, Held, Pull, Move }
 
     const double DragThreshold = 5;
     const double DragFollow = 0.9;
-    const double MaxPull = 96, MaxLean = 44;
+    const double MaxPull = 96;
     const double PullWidening = 0.4, PullRounding = 0.3;
-    const double LeanStretch = 0.6;
-    const double PullToOpen = 42, LeanToSkip = 40;
+    const double PullToOpen = 42;
+    const double SnapToCentre = 14, ScreenEdgeMargin = 8;
     const double FlickSpeed = 550, FlickMinDistance = 12;
     const double MaxThrowSpeed = 1000;
     const double PointerSpeedSmoothing = 0.03;
@@ -24,7 +25,7 @@ public partial class MainWindow
     Point _grabStart, _pointerLast;
     double _pointerAt;
     Vector _pointerSpeed;
-    double _pull, _leanDrag;
+    double _pull, _pressedAtX, _moveGrabX, _moveGrabOffset;
 
     void Island_MouseEnter(object sender, MouseEventArgs e)
     {
@@ -47,6 +48,7 @@ public partial class MainWindow
         if (_panel == Panel.None && !_ringing && Island.CaptureMouse())
         {
             _grab = Grab.Held;
+            _pressedAtX = CursorX;
             _grabStart = _pointerLast = e.GetPosition(this);
             _pointerAt = _clock.Elapsed.TotalSeconds;
             _pointerSpeed = default;
@@ -71,12 +73,33 @@ public partial class MainWindow
         if (_grab == Grab.Held)
         {
             if (Math.Abs(moved.X) < DragThreshold && Math.Abs(moved.Y) < DragThreshold) return;
-            _grab = Math.Abs(moved.X) > Math.Abs(moved.Y) ? Grab.Lean : Grab.Pull;
-            if (_grab == Grab.Pull) _morphing = true;
+            if (Math.Abs(moved.X) > Math.Abs(moved.Y)) BeginMove();
+            else
+            {
+                _grab = Grab.Pull;
+                _morphing = true;
+            }
         }
         if (_grab == Grab.Pull) _pull = Math.Max(moved.Y, 0);
-        else _leanDrag = moved.X;
+        else FollowMove();
         UpdateTargets();
+    }
+
+    // Окно едет вслед за курсором, поэтому отсчитываем от экрана, а не от окна: внутри окна курсор при этом стоит на месте
+    double CursorX => Native.CursorPosition.X / VisualTreeHelper.GetDpi(this).DpiScaleX;
+
+    void BeginMove()
+    {
+        _grab = Grab.Move;
+        _moveGrabX = _pressedAtX;
+        _moveGrabOffset = _moveX.Value;
+    }
+
+    void FollowMove()
+    {
+        (double left, double right) = MoveRange(ShapeOf(_view).Width, _bubbleSplit.Target);
+        double offset = Math.Clamp(_moveGrabOffset + CursorX - _moveGrabX, -left, right);        _moveX.Target = Math.Abs(offset) < SnapToCentre ? 0 : offset;
+        StartShapeLoop();
     }
 
     void Root_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -85,14 +108,13 @@ public partial class MainWindow
         _pressed = false;
 
         Grab grab = _grab;
-        double pulled = _pull, leant = _leanDrag;
+        double pulled = _pull;
         Vector pace = _clock.Elapsed.TotalSeconds - _pointerAt < PointerRestSeconds ? _pointerSpeed / Math.Max(_userScale.Value, MinScale) : default;
         ReleaseGrab();
 
         switch (grab)
         {
-            case Grab.Lean:
-                SkipByLean(leant, pace.X);
+            case Grab.Move:
                 break;
             case Grab.Pull when DragDirection(pulled, pace.Y, PullToOpen) <= 0:
                 break;
@@ -105,17 +127,6 @@ public partial class MainWindow
                 break;
         }
         UpdateTargets();
-    }
-
-    void SkipByLean(double leant, double pace)
-    {
-        int way = -DragDirection(leant, pace, LeanToSkip);
-        if (way == 0 || !IsMediaActive) return;
-
-        RememberSkip(way);
-        if (way > 0) _media.Next();
-        else _media.Previous();
-        _leanX.Velocity = Math.Clamp(pace, -MaxThrowSpeed, MaxThrowSpeed);
     }
 
     void ToggleOpen()
@@ -157,8 +168,9 @@ public partial class MainWindow
     {
         if (_grab == Grab.None) return;
         bool dragged = _grab != Grab.Held;
+        if (_grab == Grab.Move) Settings.Position = (int)Math.Round(_moveX.Target);
         _grab = Grab.None;
-        _pull = _leanDrag = 0;
+        _pull = 0;
         if (dragged) TuneDragSprings(false);
         Island.ReleaseMouseCapture();
     }

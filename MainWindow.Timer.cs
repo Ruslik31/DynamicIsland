@@ -24,7 +24,10 @@ public partial class MainWindow
     bool _ringing, _urgent;
     bool _pauseIconShown = true;
     int _setupMinutes = 25, _shownSeconds = -1;
-    bool _bubbleHovered, _bubblePressed;
+    const double MaxBubbleDragShare = 0.5, MaxBubbleDragBack = 24;
+    bool _bubbleHovered, _bubblePressed, _bubbleDragging;
+    double _bubbleDownX;
+    Panel _bubbleDownPanel;
 
     void ApplyTimerTint()
     {
@@ -180,6 +183,7 @@ public partial class MainWindow
     Panel BubblePanelAt(double x)
     {
         var parts = new List<(double Width, Panel Panel)>();
+        if (_bubbleMusic.Target > 0) parts.Add((_musicBubbleWidth.Value, Panel.Player));
         if (_bubbleRecord.Target > 0) parts.Add((RecordBubbleWidth, Panel.Record));
         if (_bubbleTimer.Target > 0) parts.Add((TimerBubbleWidth, Panel.Timer));
         if (_bubbleShelf.Target > 0) parts.Add((_shelfBubbleWidth.Value, Panel.Shelf));
@@ -200,7 +204,8 @@ public partial class MainWindow
 
     void Bubble_MouseLeave(object sender, MouseEventArgs e)
     {
-        _bubbleHovered = _bubblePressed = false;
+        _bubbleHovered = false;
+        if (!_bubbleDragging) _bubblePressed = false;
         UpdateTargets();
     }
 
@@ -208,17 +213,58 @@ public partial class MainWindow
     {
         e.Handled = true;
         _bubblePressed = true;
+        _bubbleDragging = false;
+        _bubbleDownX = CursorX;
+        _bubbleDownPanel = BubblePanelAt(e.GetPosition(Bubble).X);
+        if (_bubbleDownPanel == Panel.Player) Bubble.CaptureMouse();
         UpdateTargets();
+    }
+
+    /// <summary>Пузырь музыки можно взять и перенести на остров: он сожмётся в кружок или развернётся обратно.</summary>
+    void Bubble_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_bubblePressed || _bubbleDownPanel != Panel.Player || !Bubble.IsMouseCaptured) return;
+
+        double size = Math.Max(_userScale.Value, MinScale);
+        double moved = (CursorX - _bubbleDownX) / size;
+        if (!_bubbleDragging && Math.Abs(moved) < DragThreshold) return;
+
+        _bubbleDragging = true;
+        double toIsland = ShapeOf(_view).Width * MaxBubbleDragShare + BubbleGap + Bubble.Width;
+        _bubbleDrag.Target = Math.Clamp(moved, -toIsland, MaxBubbleDragBack);
+        StartShapeLoop();
     }
 
     void Bubble_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (!_bubblePressed) return;
         e.Handled = true;
-        _bubblePressed = false;
+
+        // ReleaseMouseCapture сразу вызывает LostMouseCapture, который сбрасывает перетаскивание: сначала запоминаем, чем всё кончилось
+        bool dragged = _bubbleDragging;
+        bool dropped = dragged && _bubbleDrag.Target <= -(BubbleGap + Bubble.Width / 2);
+        _bubblePressed = _bubbleDragging = false;
+        Bubble.ReleaseMouseCapture();
+
+        if (dragged)
+        {
+            _bubbleDrag.Target = 0;
+            if (dropped) Settings.DiscordMusicMini = !Settings.DiscordMusicMini;
+            UpdateTargets();
+            return;
+        }
+
         SelectPanel(BubblePanelAt(e.GetPosition(Bubble).X));
         UpdateView();
         UpdateTargets();
         _collapseTimeout.Start(LongCollapseDelay);
+    }
+
+    void Bubble_LostMouseCapture(object sender, MouseEventArgs e)
+    {
+        if (!_bubbleDragging) return;
+        _bubbleDragging = _bubblePressed = false;
+        _bubbleDrag.Target = 0;
+        UpdateTargets();
     }
 }

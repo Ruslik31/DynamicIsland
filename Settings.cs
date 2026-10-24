@@ -62,6 +62,9 @@ static class Settings
     static readonly int[] AvatarCounts = [3, 4, 5, 6];
     static readonly double[] MessageSeconds = [3.5, 6, 10];
 
+    const int MaxPosition = 4000;
+    static int _position = Math.Clamp(Read(nameof(Position), 0), -MaxPosition, MaxPosition);
+    static bool _discordMusicBubble = ReadSwitch(nameof(DiscordMusicBubble)), _discordMusicMini = ReadSwitch(nameof(DiscordMusicMini), false);
     static bool _music = ReadSwitch(nameof(Music), false);
     static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
     static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), false), _discordInGames = ReadSwitch(nameof(DiscordInGames));
@@ -96,6 +99,27 @@ static class Settings
     {
         get => _music;
         set => Write(nameof(Music), _music = value);
+    }
+
+    /// <summary>Сдвиг острова от центра экрана по горизонтали, в пикселях: остров можно потянуть вдоль верхнего края.</summary>
+    public static int Position
+    {
+        get => _position;
+        set => Write(nameof(Position), _position = Math.Clamp(value, -MaxPosition, MaxPosition));
+    }
+
+    /// <summary>Во время звонка музыка висит отдельным пузырём рядом с островом.</summary>
+    public static bool DiscordMusicBubble
+    {
+        get => _discordMusicBubble;
+        set => Write(nameof(DiscordMusicBubble), _discordMusicBubble = value);
+    }
+
+    /// <summary>Пузырь музыки сжат в маленький кружок с обложкой: его перетаскивают на остров, чтобы сжать или развернуть.</summary>
+    public static bool DiscordMusicMini
+    {
+        get => _discordMusicMini;
+        set => Write(nameof(DiscordMusicMini), _discordMusicMini = value);
     }
 
     /// <summary>Остров показывает голосовой канал, пока вы в звонке.</summary>

@@ -42,7 +42,12 @@ public partial class MainWindow
 
     Color AccentColor => Settings.Accent ?? _media.Accent;
 
-    bool IsEqVisible => MediaSpots.ContainsKey(_view);
+    bool IsEqVisible => MediaSpots.ContainsKey(_view) || BubbleMusicShown;
+
+    bool BubbleMusicShown => _bubbleMusic.Target > 0 && _bubbleSplit.Target > 0;
+
+    /// <summary>Во время звонка играющая музыка висит пузырём рядом с островом.</summary>
+    bool WantsMusicBubble() => ShowsVoice && IsMediaActive && Settings.DiscordMusicBubble && _view != View.Media;
 
     void OnMediaChanged()
     {
@@ -66,6 +71,7 @@ public partial class MainWindow
             _cover = _media.Art;
             int heading = _clock.Elapsed.TotalSeconds - _skipAt < SkipMemorySeconds ? _skipDirection : 1;
             Art.Show(_cover, heading);
+            BubbleArt.Show(_cover, heading);
             SyncAccent();
         }
 
@@ -173,6 +179,7 @@ public partial class MainWindow
         }
 
         bool moving = Eq.Tick(bands, level, playing, now, dt);
+        if (BubbleMusicShown) moving |= BubbleEq.Tick(bands, level, playing, now, dt);
         moving |= Settings.Backdrop == Backdrop.Glow ? Glow.Tick(Eq, now, dt) : AdvanceBackdrop(bands, playing, now, dt);
         return IsEqVisible && (playing || moving);
     }

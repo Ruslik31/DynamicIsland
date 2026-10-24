@@ -982,7 +982,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="DiscordVoicePage" Width="340" Height="256" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="DiscordVoicePage" Width="340" Height="296" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="ЗВОНОК" Click="DiscordVoiceBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="DiscordVoice_Click">
@@ -1012,6 +1012,13 @@
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Expand"/>
                                 <TextBlock Style="{StaticResource RowLabel}" Text="Видно в играх"/>
                                 <local:Toggle x:Name="DiscordInGamesSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordMusicBubble_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Note"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Музыка пузырём"/>
+                                <local:Toggle x:Name="DiscordMusicBubbleSwitch" Style="{StaticResource RowSwitch}"/>
                             </Grid>
                         </Button>
                         <Button Style="{StaticResource RowButton}" Click="DiscordAvatars_Click">
@@ -1672,7 +1679,8 @@
                 Background="Transparent" Padding="1"
                 HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0,0"
                 MouseEnter="Bubble_MouseEnter" MouseLeave="Bubble_MouseLeave"
-                MouseLeftButtonDown="Bubble_MouseLeftButtonDown" MouseLeftButtonUp="Bubble_MouseLeftButtonUp">
+                MouseLeftButtonDown="Bubble_MouseLeftButtonDown" MouseLeftButtonUp="Bubble_MouseLeftButtonUp"
+                MouseMove="Bubble_MouseMove" LostMouseCapture="Bubble_LostMouseCapture">
             <Border.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform x:Name="BubbleScale"/>
@@ -1680,6 +1688,14 @@
                 </TransformGroup>
             </Border.RenderTransform>
             <Grid x:Name="BubbleBody" ClipToBounds="True">
+                <Grid x:Name="BubbleMusic" Width="66" HorizontalAlignment="Left">
+                    <Grid x:Name="BubbleCoverBox" Width="22" Height="22" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <Border Background="{StaticResource ArtPlaceholder}" CornerRadius="6"/>
+                        <local:Cover x:Name="BubbleArt" Radius="6"/>
+                    </Grid>
+                    <local:Equalizer x:Name="BubbleEq" Bars="8" Few="5" Width="19" Height="14" IsHitTestVisible="False"
+                                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                </Grid>
                 <Grid x:Name="BubbleRecord" Width="76" HorizontalAlignment="Left">
                     <Ellipse x:Name="BubbleRecordDot" Width="9" Height="9" Fill="{StaticResource Red}"
                              HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0"/>
