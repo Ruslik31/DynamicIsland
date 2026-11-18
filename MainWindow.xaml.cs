@@ -93,7 +93,7 @@ public partial class MainWindow : Window
     const int FullscreenCheckTicks = 5, ClockUpdateTicks = 10, HeadsetReadTicks = 300;
     static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(100);
     static readonly TimeSpan PausedMediaLinger = TimeSpan.FromSeconds(30);
-    static readonly TimeSpan CollapseDelay = TimeSpan.FromMilliseconds(550);
+    static TimeSpan CollapseDelay => Settings.CollapseDelayTime;
     static readonly TimeSpan LongCollapseDelay = TimeSpan.FromSeconds(2.5);
     static readonly TimeSpan AwayDuration = TimeSpan.FromSeconds(5);
 
@@ -109,6 +109,7 @@ public partial class MainWindow : Window
     readonly DispatcherTimer _ticker = new() { Interval = TickInterval };
     readonly DispatcherTimer _updateCheckTimer = new() { Interval = TimeSpan.FromHours(2) };
     readonly DelayedAction _transientTimeout, _collapseTimeout, _awayTimeout;
+    double _shrinkGraceUntil;
     readonly View? _forcedView;
     readonly double _forcedTimerSeconds;
     readonly int _forcedHeadsetCharge;
@@ -458,6 +459,11 @@ public partial class MainWindow : Window
             _ => _transientView ?? (_updater.State == Updater.Stage.Loading ? View.Loading
                 : ShowsVoice ? View.Voice : IsMediaActive ? View.Media : _obs.Recording ? View.Record : _countdown.IsActive ? View.Timer : View.Idle),
         };
+        if (!Settings.DiscordEnabled)
+        {
+            if (target is View.Voice or View.VoiceBig or View.Message)
+                target = IsMediaActive ? View.Media : _obs.Recording ? View.Record : _countdown.IsActive ? View.Timer : View.Idle;
+        }
         return target == View.Toast && !MusicOn ? View.Idle : target;
     }
 
@@ -478,6 +484,7 @@ public partial class MainWindow : Window
         SyncEq();
         SyncRim();
         SyncCover();
+        SyncCompactAnimation();
         if (!changed) return;
         if (target == View.MediaBig) StartSeekLoop();
         if (target == View.Media) UpdateLyric(true);
@@ -492,6 +499,14 @@ public partial class MainWindow : Window
         else ShowLyricsPlaceholder(false);
 
         PillShape to = ShapeOf(target);
+        if (to.Height < from.Height && _panel != Panel.None)
+        {
+            _shrinkGraceUntil = _clock.Elapsed.TotalSeconds + 3.0;
+            if (!_hovered)
+            {
+                _collapseTimeout.Start(TimeSpan.FromSeconds(Math.Max(Settings.CollapseDelayTime.TotalSeconds, 3.0)));
+            }
+        }
         bool growing = to.Width * to.Height >= from.Width * from.Height;
         _width.Tune(growing ? 330 : 260, growing ? 22 : 27);
         _height.Tune(growing ? 220 : 400, growing ? 22 : 33);
@@ -582,6 +597,11 @@ public partial class MainWindow : Window
     void Collapse()
     {
         if (_hovered || _pickingFiles || IsTyping) return;
+        if (_clock.Elapsed.TotalSeconds < _shrinkGraceUntil)
+        {
+            _collapseTimeout.Start(TimeSpan.FromSeconds(_shrinkGraceUntil - _clock.Elapsed.TotalSeconds));
+            return;
+        }
         ShowPanel(Panel.None);
     }
 

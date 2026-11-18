@@ -84,6 +84,20 @@ sealed class DiscordService : IDisposable
 
     public event Action<ChatMessage>? MessageReceived;
 
+    public void Stop()
+    {
+        Started = false;
+        try { _rpc.Stop(); } catch { }
+        try { _bridge.Stop(); } catch { }
+        _rpcVoice = NoCall;
+        _bridgeVoice = NoCall;
+        Voice = NoCall;
+        _speaking.Clear();
+        Me = null;
+        LinkChanged?.Invoke();
+        VoiceChanged?.Invoke();
+    }
+
     public void Start()
     {
         try

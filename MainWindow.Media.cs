@@ -148,6 +148,7 @@ public partial class MainWindow
         _accentBrush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(AccentColor, time));
         Color[] palette = Settings.Accent is { } own ? CoverPalette.Around(own) : _media.Palette;
         Glow.Tint(palette, time);
+        CompactGlow.Tint(palette, time);
         PlayerMatrix.Tint(palette, time);
         PlayerLyricWait.Tint(palette, time);
         foreach (RadioButton tile in BackdropStrip.Children) ((BackdropPreview)tile.Content).Tint(palette);
@@ -160,6 +161,12 @@ public partial class MainWindow
         PlayerMatrix.SetVisible(backdrop.HasFlag(Backdrop.Matrix));
         PlayerStars.SetVisible(backdrop.HasFlag(Backdrop.Stars));
         PlayerStars.AboveMatrix = backdrop.HasFlag(Backdrop.Matrix);
+        SyncCompactAnimation();
+    }
+
+    void SyncCompactAnimation()
+    {
+        CompactGlow.SetVisible(Settings.CompactMusicAnimation && _media.IsPlaying && _view == View.Media);
     }
 
     void SyncEq()
@@ -183,6 +190,7 @@ public partial class MainWindow
         bool moving = Eq.Tick(bands, level, playing, now, dt);
         if (BubbleMusicShown) moving |= BubbleEq.Tick(bands, level, playing, now, dt);
         moving |= Settings.Backdrop == Backdrop.Glow ? Glow.Tick(Eq, now, dt) : AdvanceBackdrop(bands, playing, now, dt);
+        if (CompactGlow.IsVisible) moving |= CompactGlow.Tick(Eq, now, dt);
         return IsEqVisible && (playing || moving);
     }
 
@@ -200,6 +208,7 @@ public partial class MainWindow
         if (_view == View.Media)
         {
             MediaView.Width = w;
+            CompactGlow.Width = w;
             CentreLyrics();
         }
         if (_view == View.Voice) VoiceView.Width = w;

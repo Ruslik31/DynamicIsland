@@ -58,12 +58,14 @@ static class Settings
     const string Key = @"Software\DiscordIsland";
     const int MinScale = 85, MaxScale = 130, MaxGap = 24;
     const int DefaultScale = 100, DefaultGap = 8;
-    const int MaxAvatarChoice = 3, MaxMessageSecondsChoice = 2;
+    const int MaxAvatarChoice = 3, MaxMessageSecondsChoice = 2, MaxCollapseDelayChoice = 3;
     static readonly int[] AvatarCounts = [3, 4, 5, 6];
     static readonly double[] MessageSeconds = [3.5, 6, 10];
+    static readonly double[] CollapseDelays = [0.55, 1.5, 3.0, 5.0];
 
     const int MaxPosition = 4000;
     static int _position = Math.Clamp(Read(nameof(Position), 0), -MaxPosition, MaxPosition);
+    static bool _discordEnabled = ReadSwitch(nameof(DiscordEnabled), true);
     static bool _discordMusicBubble = ReadSwitch(nameof(DiscordMusicBubble)), _discordMusicMini = ReadSwitch(nameof(DiscordMusicMini), false);
     static bool _music = ReadSwitch(nameof(Music));
     static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
@@ -93,6 +95,15 @@ static class Settings
     static int _scale = Math.Clamp(Read(nameof(Scale), DefaultScale), MinScale, MaxScale);
     static int _gap = Math.Clamp(Read(nameof(Gap), DefaultGap), 0, MaxGap);
     static int _accent = Read(nameof(Accent), 0);
+    static int _collapseDelayChoice = Math.Clamp(Read(nameof(CollapseDelayChoice), 0), 0, MaxCollapseDelayChoice);
+    static bool _compactMusicAnimation = ReadSwitch(nameof(CompactMusicAnimation), false);
+
+    /// <summary>Интеграция с Discord: по умолчанию включена.</summary>
+    public static bool DiscordEnabled
+    {
+        get => _discordEnabled;
+        set => Write(nameof(DiscordEnabled), _discordEnabled = value);
+    }
 
     /// <summary>Музыкальный плеер острова: по умолчанию включён, его можно выключить в настройках.</summary>
     public static bool Music
@@ -203,6 +214,22 @@ static class Settings
     }
 
     public static double DiscordMessageSeconds => MessageSeconds[_discordMessageTime];
+
+    /// <summary>Номер варианта «сколько секунд висит развёрнутый остров после ухода курсора».</summary>
+    public static int CollapseDelayChoice
+    {
+        get => _collapseDelayChoice;
+        set => Write(nameof(CollapseDelayChoice), _collapseDelayChoice = Math.Clamp(value, 0, MaxCollapseDelayChoice));
+    }
+
+    public static TimeSpan CollapseDelayTime => TimeSpan.FromSeconds(CollapseDelays[_collapseDelayChoice]);
+
+    /// <summary>Анимация волны в компактном острове музыки при воспроизведении.</summary>
+    public static bool CompactMusicAnimation
+    {
+        get => _compactMusicAnimation;
+        set => Write(nameof(CompactMusicAnimation), _compactMusicAnimation = value);
+    }
 
     public static bool Dots
     {

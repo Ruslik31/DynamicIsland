@@ -30,6 +30,7 @@ public partial class MainWindow
     void Island_MouseEnter(object sender, MouseEventArgs e)
     {
         _hovered = true;
+        _shrinkGraceUntil = 0;
         _collapseTimeout.Cancel();
         UpdateTargets();
     }
@@ -39,7 +40,14 @@ public partial class MainWindow
         _hovered = _pressed = false;
         StirLyrics();
         UpdateTargets();
-        if (_panel != Panel.None) _collapseTimeout.Start(CollapseDelay);
+        if (_panel != Panel.None)
+        {
+            double remaining = _shrinkGraceUntil - _clock.Elapsed.TotalSeconds;
+            TimeSpan delay = remaining > 0
+                ? TimeSpan.FromSeconds(Math.Max(CollapseDelay.TotalSeconds, remaining))
+                : CollapseDelay;
+            _collapseTimeout.Start(delay);
+        }
     }
 
     void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -98,7 +106,9 @@ public partial class MainWindow
     void FollowMove()
     {
         (double left, double right) = MoveRange(ShapeOf(_view).Width, _bubbleSplit.Target);
-        double offset = Math.Clamp(_moveGrabOffset + CursorX - _moveGrabX, -left, right);        _moveX.Target = Math.Abs(offset) < SnapToCentre ? 0 : offset;
+        double offset = Math.Clamp(_moveGrabOffset + CursorX - _moveGrabX, -left, right);
+        _moveX.Snap(offset);
+        PlaceWindow(ShapeOf(_view).Width);
         StartShapeLoop();
     }
 
@@ -168,7 +178,12 @@ public partial class MainWindow
     {
         if (_grab == Grab.None) return;
         bool dragged = _grab != Grab.Held;
-        if (_grab == Grab.Move) Settings.Position = (int)Math.Round(_moveX.Target);
+        if (_grab == Grab.Move)
+        {
+            double target = Math.Abs(_moveX.Value) < SnapToCentre ? 0 : _moveX.Value;
+            _moveX.Target = target;
+            Settings.Position = (int)Math.Round(target);
+        }
         _grab = Grab.None;
         _pull = 0;
         if (dragged) TuneDragSprings(false);

@@ -30,7 +30,7 @@ public partial class MainWindow
     int _shownVoiceSeconds = -1;
     Action? _messageOpen;
 
-    bool ShowsVoice => Settings.DiscordVoice && _discord.InCall;
+    bool ShowsVoice => Settings.DiscordEnabled && Settings.DiscordVoice && _discord.InCall;
 
     void PrepareDiscord()
     {
@@ -46,6 +46,13 @@ public partial class MainWindow
 
     void StartDiscord()
     {
+        if (!Settings.DiscordEnabled)
+        {
+            SyncVoice();
+            SyncDiscordTexts();
+            SyncDiscordSwitches(false);
+            return;
+        }
         string[] args = Environment.GetCommandLineArgs();
         if (args.Contains("--demo")) _discord.StartDemo(args.Contains("--demo-message"));
         else _discord.Start();
@@ -74,6 +81,14 @@ public partial class MainWindow
 
     void SyncDiscordTexts()
     {
+        if (!Settings.DiscordEnabled)
+        {
+            MenuDiscord.Text = "выкл";
+            DiscordDot.Fill = (Brush)FindResource("Faint");
+            SyncPluginRow();
+            DiscordStatus.Text = "Отключено в настройках";
+            return;
+        }
         bool linked = _discord.Linked;
         MenuDiscord.Text = _discord.InCall ? "в звонке" : linked ? "подключён" : "ждёт Discord";
         DiscordDot.Fill = linked ? _green : (Brush)FindResource("Faint");
@@ -445,6 +460,27 @@ public partial class MainWindow
         ShowPanel(Panel.Discord);
     }
 
+    void DiscordEnabled_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.DiscordEnabled = !Settings.DiscordEnabled;
+        if (Settings.DiscordEnabled)
+        {
+            StartDiscord();
+        }
+        else
+        {
+            _discord.Stop();
+            VoiceAvatars.Children.Clear();
+            VoiceMembers.Children.Clear();
+            _compactAvatars.Clear();
+            _shownVoiceSeconds = -1;
+        }
+        UpdateSwitches(true);
+        SyncDiscordTexts();
+        UpdateView();
+        UpdateTargets();
+    }
+
     void DiscordBack_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.Menu);
 
     void DiscordVoiceRow_Click(object sender, RoutedEventArgs e) => ShowPanel(Panel.DiscordVoice);
@@ -457,6 +493,7 @@ public partial class MainWindow
 
     void SyncDiscordSwitches(bool animate)
     {
+        DiscordEnabledSwitch.Set(Settings.DiscordEnabled, animate);
         DiscordLinkSwitch.Set(Settings.DiscordLink, animate);
         DiscordVoiceSwitch.Set(Settings.DiscordVoice, animate);
         DiscordSpeakingSwitch.Set(Settings.DiscordSpeaking, animate);

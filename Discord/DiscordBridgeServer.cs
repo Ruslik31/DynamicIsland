@@ -28,7 +28,7 @@ public sealed class DiscordBridgeServer : IDisposable
     private readonly string _configPath;
     private readonly string _token;
     private HttpListener _listener = null!;
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource _cts = new();
     private readonly object _gate = new();
     private Connection? _active;
 
@@ -61,6 +61,7 @@ public sealed class DiscordBridgeServer : IDisposable
 
     public void Start()
     {
+        if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
         Port = Listen(PreferredPort) ? PreferredPort : ListenOnFreePort();
         var cfg = JsonSerializer.Serialize(new { port = Port, token = _token, pid = Environment.ProcessId });
         File.WriteAllText(_configPath, cfg, new UTF8Encoding(false));
@@ -260,6 +261,15 @@ public sealed class DiscordBridgeServer : IDisposable
         {
             DebugReceived?.Invoke(new JsonObject { ["error"] = "parse: " + e.Message });
         }
+    }
+
+    public void Stop()
+    {
+        try { _cts.Cancel(); } catch { }
+        try { _listener?.Close(); } catch { }
+        lock (_gate) { try { _active?.Socket.Abort(); } catch { } _active = null; }
+        try { File.Delete(_configPath); } catch { }
+        Disconnected?.Invoke();
     }
 
     public void Dispose()

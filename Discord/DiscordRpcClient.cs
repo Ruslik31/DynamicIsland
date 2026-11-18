@@ -24,7 +24,7 @@ public sealed class DiscordRpcClient : IDisposable
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(10) };
 
     private readonly string _tokenFilePath;
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly Dictionary<string, TaskCompletionSource<JsonElement>> _pendingRequests = [];
     private readonly Dictionary<string, string> _guildNames = [];
@@ -64,7 +64,17 @@ public sealed class DiscordRpcClient : IDisposable
 
     public void Start()
     {
+        if (_disposed) return;
+        if (_cts.IsCancellationRequested) _cts = new CancellationTokenSource();
         _ = Task.Run(WorkerLoopAsync);
+    }
+
+    public void Stop()
+    {
+        try { _cts.Cancel(); } catch { }
+        try { _pipe?.Dispose(); } catch { }
+        _pipe = null;
+        CleanupSession();
     }
 
     // ---------- фоновый жизненный цикл соединения ----------

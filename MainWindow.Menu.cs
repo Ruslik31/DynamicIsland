@@ -239,6 +239,20 @@ public partial class MainWindow
         RefreshLookPage();
     }
 
+    void CompactMusicAnimation_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.CompactMusicAnimation = !Settings.CompactMusicAnimation;
+        UpdateSwitches(true);
+        SyncCompactAnimation();
+        SyncEq();
+    }
+
+    void CollapseDelay_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.CollapseDelayChoice = CollapseDelaySegments.PickUnderPointer();
+        UpdateSwitches(true);
+    }
+
     void Glass_Click(object sender, RoutedEventArgs e)
     {
         Settings.Glass = !Settings.Glass;
@@ -375,6 +389,8 @@ public partial class MainWindow
         SeekStyleSegments.Set(Settings.LineBar ? 1 : 0, LookView.IsVisible);
         SeekHoverSegments.Set((int)Settings.SeekHover, LookView.IsVisible);
         GlassSwitch.Set(Settings.Glass, LookView.IsVisible);
+        CompactMusicAnimationSwitch.Set(Settings.CompactMusicAnimation, LookView.IsVisible);
+        CollapseDelaySegments.Set(Settings.CollapseDelayChoice, LookView.IsVisible);
         ((RadioButton)BackdropStrip.Children[(int)Settings.Backdrop]).IsChecked = true;
         ((RadioButton)LyricChangeStrip.Children[(int)Settings.LyricChange]).IsChecked = true;
         ((RadioButton)HoverStrip.Children[(int)Settings.Hover]).IsChecked = true;

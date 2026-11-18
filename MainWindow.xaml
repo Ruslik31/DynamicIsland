@@ -485,6 +485,7 @@
                 </Grid>
 
                 <Grid x:Name="MediaView" Width="210" Height="34" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <local:Aura x:Name="CompactGlow" Height="34" VerticalAlignment="Bottom" IsHitTestVisible="False" Visibility="Collapsed"/>
                     <Canvas x:Name="LyricBox" Height="34" Margin="36,0,41,0"
                             Background="Transparent" ClipToBounds="True" IsHitTestVisible="False"
                             SizeChanged="LyricBox_SizeChanged">
@@ -943,9 +944,17 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid x:Name="DiscordPage" Width="320" Height="254" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="DiscordPage" Width="320" Height="294" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="DISCORD" Click="DiscordBack_Click"/>
+                        <Button Style="{StaticResource RowButton}" Click="DiscordEnabled_Click">
+                            <Grid>
+                                <local:VoiceIcon Kind="Headset" Width="17" Height="17" Fill="{StaticResource Dim}"
+                                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Включить Discord"/>
+                                <local:Toggle x:Name="DiscordEnabledSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
                         <Grid Height="34">
                             <Ellipse x:Name="DiscordDot" Width="8" Height="8" Fill="{StaticResource Faint}"
                                      HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0,0,0"/>
@@ -1374,6 +1383,20 @@
                                                         Minimum="0" Maximum="24" Step="2" Changed="GapSlider_Changed"/>
                                         <local:Digits x:Name="GapText" Foreground="{StaticResource Dim}"
                                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                                <Button Style="{StaticResource RowButton}" Click="CompactMusicAnimation_Click">
+                                    <Grid>
+                                        <local:Icon Style="{StaticResource RowIcon}" Kind="Stars"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Волна в малом острове"/>
+                                        <local:Toggle x:Name="CompactMusicAnimationSwitch" Style="{StaticResource RowSwitch}"/>
+                                    </Grid>
+                                </Button>
+                                <Button Style="{StaticResource RowButton}" Click="CollapseDelay_Click">
+                                    <Grid>
+                                        <local:Icon Style="{StaticResource RowIcon}" Kind="Timer"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Сворачивание вне окна, сек"/>
+                                        <local:Segments x:Name="CollapseDelaySegments" Style="{StaticResource RowSegments}" Labels="0.5|1.5|3|5"/>
                                     </Grid>
                                 </Button>
                                 <Button Style="{StaticResource RowButton}" Click="Glass_Click">
