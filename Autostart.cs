@@ -7,14 +7,31 @@ static class Autostart
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string Name = "DiscordIsland";
 
+    public static string? RegisteredPath
+    {
+        get
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+                if (key?.GetValue(Name) is string value)
+                {
+                    return value.Trim('\"', ' ');
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
+
     public static bool Enabled
     {
         get
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-            string? exe = Environment.ProcessPath;
-            return exe != null && key?.GetValue(Name) is string value
-                && value.Contains(exe, StringComparison.OrdinalIgnoreCase);
+            string? registered = RegisteredPath;
+            string? current = Environment.ProcessPath;
+            return registered != null && current != null
+                && string.Equals(registered, current, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -23,5 +40,11 @@ static class Autostart
         using var key = Registry.CurrentUser.CreateSubKey(RunKey);
         if (enabled && Environment.ProcessPath is { } exe) key.SetValue(Name, $"\"{exe}\"");
         else key.DeleteValue(Name, false);
+    }
+
+    public static void UpdateRegisteredPath(string newPath)
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(RunKey);
+        key.SetValue(Name, $"\"{newPath}\"");
     }
 }

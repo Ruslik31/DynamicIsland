@@ -107,11 +107,13 @@ public partial class MainWindow : Window
     readonly Updater _updater = new();
     readonly Stopwatch _clock = Stopwatch.StartNew();
     readonly DispatcherTimer _ticker = new() { Interval = TickInterval };
+    readonly DispatcherTimer _updateCheckTimer = new() { Interval = TimeSpan.FromHours(2) };
     readonly DelayedAction _transientTimeout, _collapseTimeout, _awayTimeout;
     readonly View? _forcedView;
     readonly double _forcedTimerSeconds;
     readonly int _forcedHeadsetCharge;
 
+    Version? _notifiedUpdateVersion;
     View _view = View.Idle;
     View? _transientView;
     Panel _panel;
@@ -320,6 +322,45 @@ public partial class MainWindow : Window
         catch (Exception ex) { App.Log(ex); }
         _obs.Start();
         StartDiscord();
+        StartUpdateChecks();
+    }
+
+    void StartUpdateChecks()
+    {
+        _updateCheckTimer.Tick += async (_, _) => await CheckForUpdateSilentlyAsync();
+        _updateCheckTimer.Start();
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(5000);
+            await Dispatcher.InvokeAsync(CheckForUpdateSilentlyAsync);
+        });
+    }
+
+    async Task CheckForUpdateSilentlyAsync()
+    {
+        try
+        {
+            await _updater.CheckAsync();
+            if (_updater.State == Updater.Stage.Available && _updater.LatestVersion is { } latest)
+            {
+                if (_notifiedUpdateVersion != latest)
+                {
+                    _notifiedUpdateVersion = latest;
+                    Notify(
+                        Glyph.Update,
+                        _orange,
+                        $"Обновление v{latest}",
+                        "Нажмите, чтобы обновить остров",
+                        seconds: 8,
+                        open: () => ShowPanel(Panel.Update));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log(ex);
+        }
     }
 
     void CenterOnScreen()
@@ -343,6 +384,7 @@ public partial class MainWindow : Window
     void Exit()
     {
         _ticker.Stop();
+        _updateCheckTimer.Stop();
         _alarm.Stop();
         _discord.Dispose();
         _pointerLyric?.ShowLine("", 0, 0);
@@ -448,6 +490,7 @@ public partial class MainWindow : Window
         _view = target;
         if (target == View.MediaBig) UpdatePlayerLyrics(true);
         else ShowLyricsPlaceholder(false);
+
         PillShape to = ShapeOf(target);
         bool growing = to.Width * to.Height >= from.Width * from.Height;
         _width.Tune(growing ? 330 : 260, growing ? 22 : 27);
