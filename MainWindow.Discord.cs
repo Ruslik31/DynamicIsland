@@ -54,42 +54,66 @@ public partial class MainWindow
         SyncDiscordSwitches(false);
     }
 
-    // ---------- связь с плагином ----------
+    // ---------- связь с Discord (RPC / плагин) ----------
 
     void OnDiscordLink()
     {
         SyncDiscordTexts();
         if (!Settings.DiscordLink) return;
-        if (_discord.Linked) Notify(Glyph.Check, _green, "Discord", "Плагин подключён");
-        else Notify(Glyph.Cross, _dim, "Discord", "Плагин отключился");
+        if (_discord.Linked)
+        {
+            string mode = _discord.IsRpcConnected && _discord.IsBridgeConnected
+                ? "Нативно + плагин"
+                : _discord.IsRpcConnected
+                    ? "Нативно (RPC)"
+                    : "Плагин подключён";
+            Notify(Glyph.Check, _green, "Discord", mode);
+        }
+        else Notify(Glyph.Cross, _dim, "Discord", "Discord отключился");
     }
 
     void SyncDiscordTexts()
     {
         bool linked = _discord.Linked;
-        MenuDiscord.Text = _discord.InCall ? "в звонке" : linked ? "подключён" : "ждёт плагин";
+        MenuDiscord.Text = _discord.InCall ? "в звонке" : linked ? "подключён" : "ждёт Discord";
         DiscordDot.Fill = linked ? _green : (Brush)FindResource("Faint");
         SyncPluginRow();
         if (!linked)
         {
-            DiscordStatus.Text = !_discord.Started ? "Не удалось открыть локальный порт" : PluginInstaller.Check() switch
-            {
-                PluginInstaller.Stage.NoBetterDiscord => "Нужен BetterDiscord (betterdiscord.app)",
-                PluginInstaller.Stage.Missing => "Плагин не установлен",
-                _ => "Жду плагин: запустите Discord",
-            };
+            DiscordStatus.Text = !_discord.Started
+                ? "Не удалось запустить подключение"
+                : "Жду Discord: запустите приложение";
             return;
         }
-        string update = _discord.PluginVersion != PluginInstaller.BundledVersion ? " · устарел" : "";
-        DiscordStatus.Text = "Подключён · плагин v" + _discord.PluginVersion + update;
+
+        if (_discord.IsRpcConnected && _discord.IsBridgeConnected)
+        {
+            DiscordStatus.Text = $"Подключён нативно + плагин v{_discord.PluginVersion}";
+        }
+        else if (_discord.IsRpcConnected)
+        {
+            DiscordStatus.Text = "Подключён нативно через RPC (без BetterDiscord)";
+        }
+        else
+        {
+            string update = _discord.PluginVersion != PluginInstaller.BundledVersion ? " · устарел" : "";
+            DiscordStatus.Text = "Подключён · плагин v" + _discord.PluginVersion + update;
+        }
     }
 
     void SyncPluginRow()
     {
+        if (_discord.IsRpcConnected && PluginInstaller.Check() == PluginInstaller.Stage.NoBetterDiscord)
+        {
+            DiscordPluginLabel.Text = "Плагин (BetterDiscord / Vesktop)";
+            DiscordPluginState.Text = "не требуется";
+            return;
+        }
+
         (DiscordPluginLabel.Text, DiscordPluginState.Text) = PluginInstaller.Check() switch
         {
-            PluginInstaller.Stage.NoBetterDiscord => ("Плагин BetterDiscord", "нет BetterDiscord"),
-            PluginInstaller.Stage.Missing => ("Установить плагин", ""),
+            PluginInstaller.Stage.NoBetterDiscord => ("Плагин (BetterDiscord / Vesktop)", "нет BetterDiscord"),
+            PluginInstaller.Stage.Missing => ("Установить плагин", "(опционально)"),
             PluginInstaller.Stage.Outdated => ("Обновить плагин", "v" + PluginInstaller.BundledVersion),
             _ => ("Плагин установлен", "v" + PluginInstaller.BundledVersion),
         };
@@ -99,7 +123,9 @@ public partial class MainWindow
     {
         if (PluginInstaller.Check() == PluginInstaller.Stage.NoBetterDiscord)
         {
-            DiscordStatus.Text = "BetterDiscord не найден (betterdiscord.app)";
+            DiscordStatus.Text = _discord.IsRpcConnected
+                ? "Голос работает нативно. Плагин нужен только для BetterDiscord/Vesktop"
+                : "BetterDiscord не найден. Запустите официальный Discord для работы через RPC";
             return;
         }
         bool done = PluginInstaller.Install();
@@ -476,7 +502,6 @@ public partial class MainWindow
     {
         Settings.DiscordInGames = !Settings.DiscordInGames;
         UpdateSwitches(true);
-        CheckFullscreen();
     }
 
     void DiscordMusicBubble_Click(object sender, RoutedEventArgs e)

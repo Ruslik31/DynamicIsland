@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\Discord\DiscordBridgeServer.cs;..\..\Discord\DiscordModels.cs" LinkBase="Discord" />
+    <Compile Include="..\..\Discord\DiscordBridgeServer.cs;..\..\Discord\DiscordRpcClient.cs;..\..\Discord\DiscordModels.cs" LinkBase="Discord" />
   </ItemGroup>
 
 </Project>
