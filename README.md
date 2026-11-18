@@ -122,10 +122,10 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 Релиз собирает GitHub Actions ([release.yml](.github/workflows/release.yml)): достаточно запушить тег, и в релиз попадут `DiscordIsland.exe` и `DiscordIslandBridge.plugin.js`. Если релиз с таким тегом уже создан вручную, файлы просто добавятся к нему.
 
 ```bash
-git tag -a v1.3.0 -m "- Нативная работа с Discord через RPC: BetterDiscord больше не обязателен
+git tag -a v1.3.1 -m "- Нативная работа с Discord через RPC: BetterDiscord больше не обязателен
 - Совместимость с новым клиентом Discord на Rust
 - Улучшена стабильность звонков и голосового управления"
-git push origin v1.3.0
+git push origin v1.3.1
 ```
 
 ### Проверка связи без острова

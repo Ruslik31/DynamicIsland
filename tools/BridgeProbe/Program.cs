@@ -51,7 +51,7 @@ server.AckReceived += n => Log("ws:ack", n.ToJsonString(json));
 server.Start();
 rpc.Start();
 
-Log("probe", $"Слушаю: нативный RPC (\\.\\pipe\\discord-ipc-*) и WebSocket (127.0.0.1:{server.Port})");
+Log("probe", $"Слушаю: нативный RPC (\\\\.\\pipe\\discord-ipc-*) и WebSocket (127.0.0.1:{server.Port})");
 
 async Task Run(string step)
 {

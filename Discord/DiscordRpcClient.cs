@@ -60,6 +60,7 @@ public sealed class DiscordRpcClient : IDisposable
     public event Action<VoiceState>? VoiceChanged;
     public event Action<string, bool>? SpeakingChanged;
     public event Action<VoiceMember, bool>? MemberMoved;
+    public event Action<string>? RawMessageReceived;
 
     public void Start()
     {
@@ -102,7 +103,7 @@ public sealed class DiscordRpcClient : IDisposable
                 }
             }
 
-            if (!_cts.IsCancellationRequested)
+            if (!_cts.IsCancellationRequested && !_disposed)
             {
                 await Task.Delay(2000, _cts.Token).ConfigureAwait(false);
             }
@@ -111,22 +112,20 @@ public sealed class DiscordRpcClient : IDisposable
 
     private static async Task<NamedPipeClientStream?> ConnectToAnyPipeAsync(CancellationToken ct)
     {
-        for (int i = 0; i <= 9; i++)
+        for (int i = 0; i < 10; i++)
         {
-            if (ct.IsCancellationRequested) return null;
             string pipeName = $"discord-ipc-{i}";
-            NamedPipeClientStream probe = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             try
             {
                 using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeoutCts.CancelAfter(350);
-                await probe.ConnectAsync(timeoutCts.Token).ConfigureAwait(false);
-                if (probe.IsConnected) return probe;
-                await probe.DisposeAsync().ConfigureAwait(false);
+                timeoutCts.CancelAfter(250);
+                await pipe.ConnectAsync(timeoutCts.Token).ConfigureAwait(false);
+                return pipe;
             }
             catch
             {
-                try { await probe.DisposeAsync().ConfigureAwait(false); } catch { /* пусто */ }
+                pipe.Dispose();
             }
         }
         return null;
@@ -134,37 +133,29 @@ public sealed class DiscordRpcClient : IDisposable
 
     private async Task RunSessionAsync(NamedPipeClientStream pipe, CancellationToken ct)
     {
-        // 1. Handshake (Opcode 0)
-        string handshakeJson = $"{{\"v\":1,\"client_id\":\"{StreamkitClientId}\"}}";
-        await SendFrameAsync(0, handshakeJson, ct).ConfigureAwait(false);
-
-        // Запускаем чтение входящих кадров
-        using var sessionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        Task readerTask = Task.Run(() => ReadLoopAsync(pipe, sessionCts.Token), sessionCts.Token);
-
-        try
+        // Отправка рукопожатия (opcode 0 = HANDSHAKE)
+        var handshake = new
         {
-            await readerTask.ConfigureAwait(false);
-        }
-        finally
-        {
-            sessionCts.Cancel();
-        }
+            v = 1,
+            client_id = StreamkitClientId
+        };
+        await SendFrameAsync(0, JsonSerializer.Serialize(handshake), ct).ConfigureAwait(false);
+
+        // Читаем входящие кадры в цикле
+        await ReadLoopAsync(pipe, ct).ConfigureAwait(false);
     }
 
     private void CleanupSession()
     {
-        bool wasConnected = IsConnected;
         IsConnected = false;
         _pipe = null;
+        _channelMembers.Clear();
+        _speakingUsers.Clear();
         _currentChannelId = null;
         _currentChannelName = null;
         _currentGuildId = null;
         _currentGuildName = null;
-        _channelMembers.Clear();
-        _speakingUsers.Clear();
         Voice = EmptyVoiceState;
-        Me = null;
 
         lock (_pendingRequests)
         {
@@ -175,14 +166,10 @@ public sealed class DiscordRpcClient : IDisposable
             _pendingRequests.Clear();
         }
 
-        if (wasConnected)
-        {
-            Disconnected?.Invoke();
-            VoiceChanged?.Invoke(EmptyVoiceState);
-        }
+        Disconnected?.Invoke();
     }
 
-    // ---------- отправка и приём кадров IPC ----------
+    // ---------- фрейминг Discord IPC (длина + opcode) ----------
 
     private async Task SendFrameAsync(int opcode, string json, CancellationToken ct)
     {
@@ -190,15 +177,15 @@ public sealed class DiscordRpcClient : IDisposable
         if (pipe is null || !pipe.IsConnected) return;
 
         byte[] payload = Encoding.UTF8.GetBytes(json);
-        byte[] frame = new byte[8 + payload.Length];
-        BinaryPrimitives.WriteInt32LittleEndian(frame.AsSpan(0, 4), opcode);
-        BinaryPrimitives.WriteInt32LittleEndian(frame.AsSpan(4, 4), payload.Length);
-        payload.CopyTo(frame.AsSpan(8));
+        byte[] buffer = new byte[8 + payload.Length];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(0, 4), opcode);
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(4, 4), payload.Length);
+        payload.CopyTo(buffer.AsSpan(8));
 
         await _sendLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            await pipe.WriteAsync(frame, ct).ConfigureAwait(false);
+            await pipe.WriteAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
             await pipe.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
@@ -290,6 +277,8 @@ public sealed class DiscordRpcClient : IDisposable
     {
         try
         {
+            RawMessageReceived?.Invoke(json);
+
             using var doc = JsonDocument.Parse(json);
             JsonElement root = doc.RootElement;
 
@@ -513,7 +502,7 @@ public sealed class DiscordRpcClient : IDisposable
             case "SPEAKING_START":
                 if (data.TryGetProperty("user_id", out var suId))
                 {
-                    string id = suId.GetString() ?? "";
+                    string id = suId.ValueKind == JsonValueKind.String ? (suId.GetString() ?? "") : suId.ToString();
                     if (!string.IsNullOrEmpty(id) && _speakingUsers.Add(id))
                     {
                         SpeakingChanged?.Invoke(id, true);
@@ -524,7 +513,7 @@ public sealed class DiscordRpcClient : IDisposable
             case "SPEAKING_STOP":
                 if (data.TryGetProperty("user_id", out var euId))
                 {
-                    string id = euId.GetString() ?? "";
+                    string id = euId.ValueKind == JsonValueKind.String ? (euId.GetString() ?? "") : euId.ToString();
                     if (!string.IsNullOrEmpty(id) && _speakingUsers.Remove(id))
                     {
                         SpeakingChanged?.Invoke(id, false);
@@ -562,9 +551,10 @@ public sealed class DiscordRpcClient : IDisposable
 
         if (channelId == _currentChannelId && !string.IsNullOrEmpty(channelId)) return;
 
+        string? oldChannelId = _currentChannelId;
+
         if (string.IsNullOrEmpty(channelId))
         {
-            string? oldChId = _currentChannelId;
             _currentChannelId = null;
             _currentChannelName = null;
             _currentGuildId = null;
@@ -572,13 +562,18 @@ public sealed class DiscordRpcClient : IDisposable
             _channelMembers.Clear();
             _speakingUsers.Clear();
 
-            if (!string.IsNullOrEmpty(oldChId))
+            if (!string.IsNullOrEmpty(oldChannelId))
             {
-                _ = UnsubscribeChannelEventsAsync(oldChId);
+                _ = UnsubscribeChannelEventsAsync(oldChannelId);
             }
 
             BroadcastVoiceState();
             return;
+        }
+
+        if (!string.IsNullOrEmpty(oldChannelId) && oldChannelId != channelId)
+        {
+            _ = UnsubscribeChannelEventsAsync(oldChannelId);
         }
 
         _currentChannelId = channelId;
@@ -592,6 +587,14 @@ public sealed class DiscordRpcClient : IDisposable
         if (resp is { } r && r.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
         {
             ParseChannelSnapshot(data);
+            if (!string.IsNullOrEmpty(_currentChannelId))
+            {
+                if (!string.IsNullOrEmpty(_currentGuildId))
+                {
+                    await EnsureGuildNameAsync(_currentGuildId).ConfigureAwait(false);
+                }
+                await SubscribeChannelEventsAsync(_currentChannelId).ConfigureAwait(false);
+            }
         }
     }
 
