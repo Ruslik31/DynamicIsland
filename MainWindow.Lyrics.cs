@@ -45,6 +45,11 @@ public partial class MainWindow
     bool _lyricShowsTitle;
     double _compactMediaWidth = CompactMediaWidth;
     CompactLyric _lyricBlock;
+    LyricsService.Line[] _normalLyricLines = [];
+    int _normalLyricIndex = -1;
+    string _normalLyricTitle = "";
+    bool _normalLyricShowsTitle;
+    CompactLyric _normalLyricBlock;
     LyricsService.Line[] _playerLines = [];
     PlayerLine[] _playerRows = [];
     double _playerScroll;
@@ -71,6 +76,14 @@ public partial class MainWindow
         LyricMaskOut.Offset = 1 - LyricFadeEdge / width;
     }
 
+    void NormalLyricBox_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        double width = Math.Max(e.NewSize.Width, 2 * LyricFadeEdge);
+        NormalLyricMask.EndPoint = new Point(width, 0);
+        NormalLyricMaskIn.Offset = LyricFadeEdge / width;
+        NormalLyricMaskOut.Offset = 1 - LyricFadeEdge / width;
+    }
+
     static int LineAt(LyricsService.Line[] lines, TimeSpan time)
     {
         int index = lines.Length - 1;
@@ -81,7 +94,8 @@ public partial class MainWindow
     void UpdateLyric(bool snap = false)
     {
         if (_view == View.MediaBig) UpdatePlayerLyrics(snap);
-        if (_view != View.Media) return;
+        bool hasNormalMusic = WantsMusicBubble() && _normalTransition.Value > 0.05;
+        if (_view != View.Media && !hasNormalMusic) return;
 
         LyricsService.Line[] lines = _lyrics.LinesFor(_media.Duration);
         TimeSpan at = LyricTime;
@@ -92,12 +106,60 @@ public partial class MainWindow
         TimeSpan end = index + 1 < lines.Length ? lines[index + 1].Time : _media.Duration;
         double seconds = (end - at).TotalSeconds;
         bool named = text.Length == 0 && (index < 0 || seconds >= LyricGapSeconds);
-        if (ReferenceEquals(lines, _lyricLines) && index == _lyricIndex && (!named || title == _lyricTitle)) return;
 
-        _lyricLines = lines;
-        _lyricIndex = index;
-        _lyricTitle = title;
-        ShowLyric(named ? title : text, seconds, snap, named);
+        if (_view == View.Media)
+        {
+            if (!ReferenceEquals(lines, _lyricLines) || index != _lyricIndex || (named && title != _lyricTitle) || snap)
+            {
+                _lyricLines = lines;
+                _lyricIndex = index;
+                _lyricTitle = title;
+                ShowLyric(named ? title : text, seconds, snap, named);
+            }
+        }
+
+        if (hasNormalMusic)
+        {
+            bool hasLyrics = Settings.Lyrics && lines.Length > 0;
+            NormalLyricBox.SetVisible(hasLyrics);
+            NormalMusicInfo.SetVisible(!hasLyrics);
+
+            if (hasLyrics)
+            {
+                if (!ReferenceEquals(lines, _normalLyricLines) || index != _normalLyricIndex || (named && title != _normalLyricTitle) || snap)
+                {
+                    _normalLyricLines = lines;
+                    _normalLyricIndex = index;
+                    _normalLyricTitle = title;
+                    ShowNormalLyric(named ? title : text, seconds, snap, named);
+                }
+            }
+        }
+    }
+
+    void ShowNormalLyric(string text, double seconds, bool snap, bool named)
+    {
+        if (_normalLyricBlock == null) return;
+        CompactLyric old = _normalLyricBlock;
+        if (text == old.Text && (text.Length == 0 || (named && _normalLyricShowsTitle)) && !snap) return;
+        CompactLyric next = _normalLyricBlock = old == NormalLyricA ? NormalLyricB : NormalLyricA;
+        _normalLyricShowsTitle = named;
+
+        old.Leave(snap);
+        next.Show(text, named ? _dim : Brushes.White,
+            named ? TrackNameWidth - LyricInset - 2 * LyricFadeEdge : double.PositiveInfinity, Settings.LyricChange);
+        next.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        double width = next.DesiredSize.Width;
+        Canvas.SetTop(next, Math.Round((NormalLyricBox.Height - next.DesiredSize.Height) / 2));
+
+        double box = NormalMusicContent.Width - LyricInset;
+        if (box <= 0) box = 210 - LyricInset;
+        double overflow = width - (box - 2 * LyricFadeEdge);
+
+        next.Offset.X = overflow > 0 ? LyricFadeEdge : (box - width) / 2;
+        next.Offset.BeginAnimation(TranslateTransform.XProperty, overflow > 0 ? CreateLyricScroll(overflow, seconds) : null);
+        next.Enter();
+        StirLyrics();
     }
 
     void ShowLyric(string text, double seconds, bool snap, bool named)
@@ -238,8 +300,9 @@ public partial class MainWindow
 
     bool AdvanceLyricParting(double dt)
     {
-        bool parting = _hovered && Settings.LyricParting;
+        bool parting = (_hovered || _bottomMusicHovered) && Settings.LyricParting;
         bool overPlayer = parting && _view == View.MediaBig, overCompact = parting && _view == View.Media;
+        bool overNormal = parting && _bottomMusicHovered && _normalTransition.Value > 0.05;
         bool moving = overPlayer && _playerScrolling;
         int sung = Math.Max(_playerIndex, 0);
         for (int i = 0; i < _playerRows.Length; i++)
@@ -250,6 +313,8 @@ public partial class MainWindow
         }
         foreach (CompactLyric line in new[] { LyricA, LyricB })
             moving |= line.Part(overCompact && line == _lyricBlock ? Mouse.GetPosition(line) : null, dt);
+        foreach (CompactLyric line in new[] { NormalLyricA, NormalLyricB })
+            moving |= line.Part(overNormal && line == _normalLyricBlock ? Mouse.GetPosition(line) : null, dt);
         return moving;
     }
 

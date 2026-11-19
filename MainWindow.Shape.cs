@@ -355,6 +355,7 @@ public partial class MainWindow
             BottomMusicScale.ScaleX = BottomMusicScale.ScaleY = bottomScale;
             double normWidth = 210;
             BottomMusic.Width = normWidth;
+            NormalMusicContent.Width = normWidth;
             BottomMusicBody.Clip = Squircle.Of(new Rect(0, 0, normWidth, 34), 17);
             BottomMusicGlow.Width = normWidth;
             BottomMusicGlow.Height = 34;

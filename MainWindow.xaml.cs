@@ -179,6 +179,7 @@ public partial class MainWindow : Window
         _recordTint = new SolidColorBrush(_red.Color);
         _shelfTint = new SolidColorBrush(_indigo.Color);
         _lyricBlock = LyricA;
+        _normalLyricBlock = NormalLyricA;
 
         _forcedView = Enum.TryParse(Argument("--view"), true, out View forced) ? forced : null;
         _forcedTimerSeconds = double.TryParse(Argument("--timer"), NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds) ? seconds : 0;
