@@ -1814,7 +1814,7 @@
         </Border>
 
         <Border x:Name="BottomMusic" Width="210" Height="34" CornerRadius="17" Visibility="Collapsed"
-                Background="Black" Padding="1"
+                Background="Transparent" Padding="1"
                 HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0,0"
                 MouseEnter="BottomMusic_MouseEnter" MouseLeave="BottomMusic_MouseLeave"
                 MouseLeftButtonDown="BottomMusic_MouseLeftButtonDown" MouseLeftButtonUp="BottomMusic_MouseLeftButtonUp"

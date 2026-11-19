@@ -249,7 +249,7 @@ public partial class MainWindow
         if (!_glass.IsOn || Body.TransformToAncestor(this) is not Transform place) return;
         Matrix toPixels = place.Value;
         toPixels.Scale(dpi, dpi);
-        _glass.Cut(Body.PillInside, Body.BubbleInside, toPixels);
+        _glass.Cut(Body.PillInside, Body.BubbleInside, Body.ExtraInside, toPixels);
     }
 
     void SyncGlass(bool animate)
@@ -374,9 +374,12 @@ public partial class MainWindow
             string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
             NormalMusicArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
 
-            double bottomShapeX = (HostWidth - normWidth) / 2 + curX / scale;
-            double bottomShapeY = (pill.Bottom + BubbleGap) * normProg + _bubbleDragY.Value / scale;
-            bottomShape = new Rect(bottomShapeX, bottomShapeY, normWidth * bottomScale / scale, 34 * bottomScale / scale);
+            double bottomX = (HostWidth - normWidth) / 2 + curX;
+            double bottomShapeX = HostWidth / 2 + (bottomX - HostWidth / 2) / scale;
+            double bottomShapeY = targetBottomY / scale;
+            double bottomShapeW = normWidth * bottomScale / scale;
+            double bottomShapeH = 34 * bottomScale / scale;
+            bottomShape = new Rect(bottomShapeX, bottomShapeY, bottomShapeW, bottomShapeH);
         }
         else
         {

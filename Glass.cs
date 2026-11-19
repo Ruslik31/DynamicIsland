@@ -39,7 +39,7 @@ sealed class Glass
     Compositor? _compositor;
     DesktopWindowTarget? _target;
     IntPtr _hwnd;
-    Pane? _pill, _bubble;
+    Pane? _pill, _bubble, _extra;
 
     public Glass(Window over) => _over = over;
 
@@ -62,8 +62,10 @@ sealed class Glass
             root.RelativeSizeAdjustment = Vector2.One;
             _pill = new Pane(_compositor, backdrop);
             _bubble = new Pane(_compositor, backdrop);
+            _extra = new Pane(_compositor, backdrop);
             root.Children.InsertAtTop(_pill.Visual);
             root.Children.InsertAtTop(_bubble.Visual);
+            root.Children.InsertAtTop(_extra.Visual);
             _target.Root = root;
             Place();
         }
@@ -82,7 +84,7 @@ sealed class Glass
         _target = null;
         _compositor = null;
         _hwnd = IntPtr.Zero;
-        _pill = _bubble = null;
+        _pill = _bubble = _extra = null;
     }
 
     public void Place()
@@ -90,9 +92,10 @@ sealed class Glass
         if (_hwnd != IntPtr.Zero) Native.PlaceBehind(_hwnd, new WindowInteropHelper(_over).Handle);
     }
 
-    public void Cut((Rect Box, double Radius) pill, (Rect Box, double Radius) bubble, Matrix toPixels)
+    public void Cut((Rect Box, double Radius) pill, (Rect Box, double Radius) bubble, (Rect Box, double Radius) extra, Matrix toPixels)
     {
         _pill?.Fit(pill, toPixels);
         _bubble?.Fit(bubble, toPixels);
+        _extra?.Fit(extra, toPixels);
     }
 }

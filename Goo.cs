@@ -38,6 +38,8 @@ public sealed class Goo : FrameworkElement
 
     public (Rect Box, double Radius) BubbleInside => Inside(_bubble, _bubble.Height / 2);
 
+    public (Rect Box, double Radius) ExtraInside => Inside(_extra, _extra.Height / 2);
+
     public void Thin(bool glass, Duration time, Action thinned)
     {
         var fade = new ColorAnimation(Color.FromArgb(glass ? GlassAlpha : byte.MaxValue, 0, 0, 0), time);
