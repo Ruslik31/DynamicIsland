@@ -44,7 +44,7 @@ public partial class MainWindow
 
     bool IsEqVisible => MediaSpots.ContainsKey(_view) || BubbleMusicShown || (Settings.CompactMusicAnimation && _media.IsPlaying);
 
-    bool BubbleMusicShown => _bubbleMusic.Target > 0 && _bubbleSplit.Target > 0;
+    bool BubbleMusicShown => (_bubbleMusic.Target > 0 && _bubbleSplit.Target > 0) || _normalTransition.Target > 0;
 
     /// <summary>Во время звонка играющая музыка висит пузырём рядом с островом.</summary>
     bool WantsMusicBubble() => ShowsVoice && IsMediaActive && Settings.DiscordMusicBubble && _view != View.Media && _view != View.MediaBig && _panel != Panel.Player;
@@ -67,6 +67,8 @@ public partial class MainWindow
         ArtistBig.Text = ToastArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
         BubbleMusicTitle.Text = title;
         BubbleMusicArtist.Text = ArtistBig.Text;
+        NormalMusicTitle.Text = title;
+        NormalMusicArtist.Text = ArtistBig.Text;
 
         if (!ReferenceEquals(_cover, _media.Art))
         {
@@ -74,6 +76,7 @@ public partial class MainWindow
             int heading = _clock.Elapsed.TotalSeconds - _skipAt < SkipMemorySeconds ? _skipDirection : 1;
             Art.Show(_cover, heading);
             BubbleArt.Show(_cover, heading);
+            NormalArt.Show(_cover, heading);
             SyncAccent();
         }
 
@@ -152,6 +155,7 @@ public partial class MainWindow
         Glow.Tint(palette, time);
         CompactGlow.Tint(palette, time);
         BubbleGlow.Tint(palette, time);
+        BottomMusicGlow.Tint(palette, time);
         PlayerMatrix.Tint(palette, time);
         PlayerLyricWait.Tint(palette, time);
         foreach (RadioButton tile in BackdropStrip.Children) ((BackdropPreview)tile.Content).Tint(palette);
@@ -171,7 +175,8 @@ public partial class MainWindow
     {
         bool show = Settings.CompactMusicAnimation && _media.IsPlaying;
         CompactGlow.SetVisible(show && _view != View.MediaBig);
-        BubbleGlow.SetVisible(show && (BubbleMusicShown || _shelf.Items.Count > 0 || _countdown.IsActive || _obs.Recording));
+        BubbleGlow.SetVisible(show && (_bubbleSplit.Value > BubbleVisibleSplit || BubbleMusicShown || _shelf.Items.Count > 0 || _countdown.IsActive || _obs.Recording));
+        BottomMusicGlow.SetVisible(show && _normalTransition.Value > 0.05);
     }
 
     void SyncEq()
@@ -193,10 +198,15 @@ public partial class MainWindow
         }
 
         bool moving = Eq.Tick(bands, level, playing, now, dt);
-        if (BubbleMusicShown) moving |= BubbleEq.Tick(bands, level, playing, now, dt);
+        if (BubbleMusicShown)
+        {
+            if (BubbleEq.IsVisible) moving |= BubbleEq.Tick(bands, level, playing, now, dt);
+            if (NormalEq.IsVisible) moving |= NormalEq.Tick(bands, level, playing, now, dt);
+        }
         moving |= Settings.Backdrop == Backdrop.Glow ? Glow.Tick(Eq, now, dt) : AdvanceBackdrop(bands, playing, now, dt);
         if (CompactGlow.IsVisible) moving |= CompactGlow.Tick(Eq, now, dt);
         if (BubbleGlow.IsVisible) moving |= BubbleGlow.Tick(Eq, now, dt);
+        if (BottomMusicGlow.IsVisible) moving |= BottomMusicGlow.Tick(Eq, now, dt);
         return IsEqVisible && (playing || moving);
     }
 

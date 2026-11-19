@@ -1807,6 +1807,40 @@
                     <local:Digits x:Name="BubbleShelfText" Text="0" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource Indigo}"
                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
                 </StackPanel>
+                <Grid x:Name="BubbleUpdate" Width="36" HorizontalAlignment="Left" Cursor="Hand" Visibility="Collapsed" ToolTip="Доступно обновление">
+                    <Border Width="22" Height="22" CornerRadius="11" Background="{StaticResource Orange}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <local:Icon Kind="Update" Width="13" Height="13" Fill="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border x:Name="BottomMusic" Width="210" Height="34" CornerRadius="17" Visibility="Collapsed"
+                Background="Transparent" Padding="1"
+                HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0,0"
+                MouseEnter="BottomMusic_MouseEnter" MouseLeave="BottomMusic_MouseLeave"
+                MouseLeftButtonDown="BottomMusic_MouseLeftButtonDown" MouseLeftButtonUp="BottomMusic_MouseLeftButtonUp"
+                MouseMove="BottomMusic_MouseMove" LostMouseCapture="BottomMusic_LostMouseCapture">
+            <Border.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform x:Name="BottomMusicScale"/>
+                    <TranslateTransform x:Name="BottomMusicMove"/>
+                </TransformGroup>
+            </Border.RenderTransform>
+            <Grid x:Name="BottomMusicBody">
+                <local:Aura x:Name="BottomMusicGlow" Height="34" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False" Visibility="Collapsed"/>
+                <Grid x:Name="NormalMusicContent" HorizontalAlignment="Left" Width="210">
+                    <Grid x:Name="NormalCoverBox" Width="22" Height="22" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
+                        <Border Background="{StaticResource ArtPlaceholder}" CornerRadius="6"/>
+                        <local:Cover x:Name="NormalArt" Radius="6"/>
+                    </Grid>
+                    <StackPanel x:Name="NormalMusicInfo" Margin="36,0,34,0" VerticalAlignment="Center">
+                        <TextBlock x:Name="NormalMusicTitle" Foreground="White" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="NormalMusicArtist" Foreground="{StaticResource Dim}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,-1,0,0"/>
+                    </StackPanel>
+                    <local:Equalizer x:Name="NormalEq" Bars="8" Few="5" Width="19" Height="14" IsHitTestVisible="False"
+                                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                </Grid>
             </Grid>
         </Border>
     </Grid>

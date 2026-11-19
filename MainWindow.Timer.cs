@@ -224,6 +224,7 @@ public partial class MainWindow
         if (_bubbleRecord.Target > 0) parts.Add((RecordBubbleWidth, Panel.Record));
         if (_bubbleTimer.Target > 0) parts.Add((TimerBubbleWidth, Panel.Timer));
         if (_bubbleShelf.Target > 0) parts.Add((_shelfBubbleWidth.Value, Panel.Shelf));
+        if (_bubbleUpdate.Target > 0) parts.Add((UpdateBubbleWidth, Panel.Update));
         double end = 0;
         foreach ((double width, Panel panel) in parts.SkipLast(1))
         {
@@ -340,6 +341,8 @@ public partial class MainWindow
         {
             _bubbleDrag.Target = 0;
             _bubbleDragY.Target = 0;
+            _bubbleDrag.Tune(260, 22);
+            _bubbleDragY.Tune(260, 22);
             if (isNormal)
             {
                 if (dropCompact) Settings.DiscordMusicState = DiscordMusicState.Compact;
@@ -353,7 +356,13 @@ public partial class MainWindow
             return;
         }
 
-        SelectPanel(BubblePanelAt(e.GetPosition(Bubble).X));
+        Panel clickedPanel = BubblePanelAt(e.GetPosition(Bubble).X);
+        if (clickedPanel == Panel.Update)
+        {
+            ShowPanelAndCheckUpdate(Panel.Update);
+            return;
+        }
+        SelectPanel(clickedPanel);
         UpdateView();
         UpdateTargets();
         BeginGrowFromBubble();
@@ -364,6 +373,93 @@ public partial class MainWindow
     {
         if (!_bubbleDragging) return;
         _bubbleDragging = _bubblePressed = _bubbleDropArmed = _bubbleDropToNormal = _bubbleDropToCompact = false;
+        _bubbleDrag.Target = 0;
+        _bubbleDragY.Target = 0;
+        UpdateTargets();
+    }
+
+    void BottomMusic_MouseEnter(object sender, MouseEventArgs e)
+    {
+        _bottomMusicHovered = true;
+        UpdateTargets();
+    }
+
+    void BottomMusic_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _bottomMusicHovered = false;
+        if (!_bottomMusicDragging) _bottomMusicPressed = false;
+        UpdateTargets();
+    }
+
+    void BottomMusic_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        _bottomMusicPressed = true;
+        _bottomMusicDragging = false;
+        _bottomMusicDropToCompact = false;
+        _bottomMusicDownX = CursorX;
+        _bottomMusicDownY = CursorY;
+        BottomMusic.CaptureMouse();
+        UpdateTargets();
+    }
+
+    void BottomMusic_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_bottomMusicPressed || !BottomMusic.IsMouseCaptured) return;
+
+        double size = Math.Max(_userScale.Value, MinScale);
+        double movedX = (CursorX - _bottomMusicDownX) / size;
+        double movedY = (CursorY - _bottomMusicDownY) / size;
+        if (!_bottomMusicDragging && Math.Abs(movedX) < DragThreshold && Math.Abs(movedY) < DragThreshold) return;
+
+        _bottomMusicDragging = true;
+        // Перетаскивание вверх к дискорду
+        double reach = BubbleGap + BottomMusic.Height / 2 + BubbleDragExtra;
+        double pull = RubberBand(Math.Max(-movedY, 0), reach);
+        _bubbleDragY.Target = -pull + Math.Min(Math.Max(movedY, 0), MaxBubbleDragBack);
+        _bubbleDrag.Target = RubberBand(movedX, 40);
+
+        bool armed = pull >= reach * BubbleDropShare || movedY < -15;
+        if (armed != _bottomMusicDropToCompact)
+        {
+            _bottomMusicDropToCompact = armed;
+            UpdateTargets();
+        }
+        StartShapeLoop();
+    }
+
+    void BottomMusic_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_bottomMusicPressed) return;
+        e.Handled = true;
+
+        bool dragged = _bottomMusicDragging;
+        bool dropCompact = _bottomMusicDropToCompact;
+        _bottomMusicPressed = _bottomMusicDragging = _bottomMusicDropToCompact = false;
+        BottomMusic.ReleaseMouseCapture();
+
+        if (dragged)
+        {
+            _bubbleDrag.Target = 0;
+            _bubbleDragY.Target = 0;
+            _bubbleDrag.Tune(260, 22);
+            _bubbleDragY.Tune(260, 22);
+            if (dropCompact) Settings.DiscordMusicState = DiscordMusicState.Compact;
+            UpdateTargets();
+            return;
+        }
+
+        SelectPanel(Panel.Player);
+        UpdateView();
+        UpdateTargets();
+        BeginGrowFromBubble();
+        _collapseTimeout.Start(LongCollapseDelay);
+    }
+
+    void BottomMusic_LostMouseCapture(object sender, MouseEventArgs e)
+    {
+        if (!_bottomMusicDragging) return;
+        _bottomMusicDragging = _bottomMusicPressed = _bottomMusicDropToCompact = false;
         _bubbleDrag.Target = 0;
         _bubbleDragY.Target = 0;
         UpdateTargets();

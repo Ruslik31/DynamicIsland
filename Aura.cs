@@ -29,6 +29,9 @@ public sealed class Aura : FrameworkElement
     readonly double[] _levels = new double[Patches.Length];
     double _time;
 
+    public double VirtualWidth { get; set; }
+    public double VirtualOffset { get; set; }
+
     public Aura()
     {
         for (int p = 0; p < _brushes.Length; p++)
@@ -78,12 +81,15 @@ public sealed class Aura : FrameworkElement
         double w = ActualWidth, h = ActualHeight;
         if (w <= 0 || h <= 0) return;
 
+        double span = VirtualWidth > 0 ? VirtualWidth : w;
+        double offset = VirtualWidth > 0 ? VirtualOffset : 0;
+
         for (int p = 0; p < _brushes.Length; p++)
         {
             Patch patch = Patches[p];
             double level = _levels[p];
-            double x = w * (patch.Center + DriftRange * Math.Sin(_time * patch.DriftSpeed + patch.DriftPhase));
-            dc.DrawEllipse(_brushes[p], null, new Point(x, h), w * (BaseWidth + WidthGain * level), h * (BaseHeight + HeightGain * level));
+            double x = span * (patch.Center + DriftRange * Math.Sin(_time * patch.DriftSpeed + patch.DriftPhase)) - offset;
+            dc.DrawEllipse(_brushes[p], null, new Point(x, h), span * (BaseWidth + WidthGain * level), h * (BaseHeight + HeightGain * level));
         }
     }
 }

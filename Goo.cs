@@ -23,7 +23,7 @@ public sealed class Goo : FrameworkElement
     readonly Light _flash = new();
     readonly Pen _edge;
 
-    Rect _pill = Rect.Empty, _bubble = Rect.Empty;
+    Rect _pill = Rect.Empty, _bubble = Rect.Empty, _extra = Rect.Empty;
     double _radius;
 
     public Goo() => _edge = new Pen(_rim, 2 * RimWidth) { LineJoin = PenLineJoin.Round };
@@ -66,12 +66,13 @@ public sealed class Goo : FrameworkElement
         _flash.Mist.BeginAnimation(Brush.OpacityProperty, null);
     }
 
-    public void SetShape(Rect pill, double radius, Rect bubble)
+    public void SetShape(Rect pill, double radius, Rect bubble, Rect extra = default)
     {
-        if (pill == _pill && radius == _radius && bubble == _bubble) return;
+        if (pill == _pill && radius == _radius && bubble == _bubble && extra == _extra) return;
         _pill = pill;
         _radius = radius;
         _bubble = bubble;
+        _extra = extra;
         InvalidateVisual();
     }
 
@@ -79,23 +80,31 @@ public sealed class Goo : FrameworkElement
     {
         if (_pill.IsEmpty) return;
         Geometry pill = Outline(_pill, _radius);
-        if (_bubble.IsEmpty)
+        if (_bubble.IsEmpty && _extra.IsEmpty)
         {
             DrawBody(dc, pill);
             return;
         }
 
-        Geometry bubble = Outline(_bubble, _bubble.Height / 2);
         Geometry? neck = CreateNeck();
-        if (neck == null && !_pill.IntersectsWith(_bubble))
+        Geometry body = pill;
+        if (!_bubble.IsEmpty)
         {
-            DrawBody(dc, pill);
-            DrawBody(dc, bubble);
-            return;
+            Geometry bubble = Outline(_bubble, _bubble.Height / 2);
+            if (neck != null || _pill.IntersectsWith(_bubble))
+                body = Union(body, neck != null ? Union(bubble, neck) : bubble);
+            else
+                DrawBody(dc, bubble);
         }
-
-        Geometry body = Union(pill, bubble);
-        DrawBody(dc, neck != null ? Union(body, neck) : body);
+        if (!_extra.IsEmpty)
+        {
+            Geometry extra = Outline(_extra, _extra.Height / 2);
+            if (_pill.IntersectsWith(_extra))
+                body = Union(body, extra);
+            else
+                DrawBody(dc, extra);
+        }
+        DrawBody(dc, body);
     }
 
     public static Geometry Union(Geometry a, Geometry b) =>

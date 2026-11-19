@@ -14,7 +14,7 @@ public partial class MainWindow
     const double BubbleGap = 7;
     const double BubbleTuckFactor = 1.6;
     const double BubbleVisibleSplit = 0.01, BubbleClickableSplit = 0.75;
-    const double RecordBubbleWidth = 78, TimerBubbleWidth = 78, ShelfBubbleWidth = 54, MusicBubbleWidth = 66, MusicMiniWidth = 34;
+    const double RecordBubbleWidth = 78, TimerBubbleWidth = 78, ShelfBubbleWidth = 54, MusicBubbleWidth = 66, MusicMiniWidth = 34, UpdateBubbleWidth = 36;
     const double BubbleOverlap = 11;
     const double ShelfBubblePadding = 13, ShelfBubblePaddingWithTimer = 10;
     const double MinViewScale = 0.5, MaxViewScale = 1.15;
@@ -29,8 +29,8 @@ public partial class MainWindow
     readonly Spring _userScale = new(Settings.Scale / 100.0, 240, 26), _topGap = new(Settings.Gap, 240, 26);
     readonly Spring _bubbleSplit = new(0), _bubbleScale = new(1, 320, 20);
     readonly Spring _lyricSnapX = new(0, 200, 28), _lyricSnapY = new(0, 200, 28);
-    readonly Spring _musicBubbleWidth = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 210 : Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth, 260, 24), _bubbleDrag = new(0, 700, 50), _bubbleDragY = new(0, 700, 50);
-    readonly Spring _bubbleMusic = new(0, 260, 24), _bubbleRecord = new(0, 260, 24), _bubbleTimer = new(0, 260, 24), _bubbleShelf = new(0, 260, 24), _shelfBubbleWidth = new(ShelfBubbleWidth, 260, 24);
+    readonly Spring _musicBubbleWidth = new(Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth, 260, 24), _bubbleDrag = new(0, 700, 50), _bubbleDragY = new(0, 700, 50);
+    readonly Spring _bubbleMusic = new(0, 260, 24), _bubbleRecord = new(0, 260, 24), _bubbleTimer = new(0, 260, 24), _bubbleShelf = new(0, 260, 24), _bubbleUpdate = new(0, 260, 24), _shelfBubbleWidth = new(ShelfBubbleWidth, 260, 24);
     readonly BlurEffect _motionBlur = new() { Radius = 0, RenderingBias = RenderingBias.Performance };
     readonly FrameLoop _shapeLoop;
     readonly Glass _glass;
@@ -40,7 +40,10 @@ public partial class MainWindow
     bool _morphing, _growing;
     double _growBubbleX;
     Rect _pillRect = Rect.Empty, _bubbleRect = Rect.Empty, _growFrom = Rect.Empty;
-    readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24);
+    readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24), _normalTransition = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 1 : 0, 240, 24), _bottomMusicScale = new(1, 320, 20);
+    bool _bottomMusicHovered, _bottomMusicPressed, _bottomMusicDragging, _bottomMusicDropToCompact;
+    double _bottomMusicDownX, _bottomMusicDownY;
+    Rect _bottomMusicRect = Rect.Empty;
 
     void UpdateTargets()
     {
@@ -63,34 +66,38 @@ public partial class MainWindow
         _offsetY.Target = (_hiddenByFullscreen || _sentAway) && !_ringing ? -(shape.Height + OffscreenMargin + Settings.Gap * 100.0 / Settings.Scale) : 0;
         _scale.Target = dragging ? 1 : _pressed ? (compact ? PressedScale : PressedOpenScale) : _hovered && compact ? HoverScale : 1;
         _bubbleScale.Target = _bubblePressed ? PressedScale : _bubbleHovered ? HoverScale : 1;
+        _bottomMusicScale.Target = _bottomMusicPressed ? PressedScale : _bottomMusicHovered ? HoverScale : 1;
         StartShapeLoop();
     }
 
     void UpdateBubbleTargets(bool compact)
     {
-        // музыка уходит в пузырь, только пока главным в острове стал звонок; сама по себе она занимает остров
         bool music = WantsMusicBubble();
         bool record = _obs.Recording && _view != View.Record;
         bool timer = _countdown.IsActive && _view != View.Timer, shelf = _shelf.Items.Count > 0;
-        bool split = compact && (music || record || timer || shelf);
+        bool update = _updater.State == Updater.Stage.Available;
 
-        bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal;
-        double targetMusicWidth = isNormal
-            ? 210
-            : (Settings.DiscordMusicMini ^ _bubbleDropArmed ? MusicMiniWidth : MusicBubbleWidth);
+        bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal && music;
+        _normalTransition.Target = isNormal ? 1 : 0;
+
+        // В верхнем пузыре музыка видна только когда она НЕ в нормальном (нижнем) режиме!
+        bool bubbleHasMusic = music && !isNormal;
+        bool split = compact && (bubbleHasMusic || record || timer || shelf || update);
+
+        double targetMusicWidth = Settings.DiscordMusicMini ^ _bubbleDropArmed ? MusicMiniWidth : MusicBubbleWidth;
         if (_bubbleDropToNormal) targetMusicWidth = 210;
-        else if (_bubbleDropToCompact) targetMusicWidth = MusicBubbleWidth;
 
         _musicBubbleWidth.Target = targetMusicWidth;
         _bubbleSplit.Target = split ? 1 : 0;
         if (compact) _bubbleSplit.Tune(140, 17);
         else _bubbleSplit.Tune(300, 30);
-        if (!split) return;
+        if (!split && !isNormal) return;
 
-        _bubbleMusic.Target = music ? 1 : 0;
+        _bubbleMusic.Target = bubbleHasMusic ? 1 : 0;
         _bubbleRecord.Target = record ? 1 : 0;
         _bubbleTimer.Target = timer ? 1 : 0;
         _bubbleShelf.Target = shelf ? 1 : 0;
+        _bubbleUpdate.Target = update ? 1 : 0;
         if (shelf) _shelfBubbleWidth.Target = MeasureShelfBubble();
         if (_bubbleSplit.Value >= BarelyVisible) return;
 
@@ -99,7 +106,9 @@ public partial class MainWindow
         _bubbleRecord.Snap(_bubbleRecord.Target);
         _bubbleTimer.Snap(_bubbleTimer.Target);
         _bubbleShelf.Snap(_bubbleShelf.Target);
+        _bubbleUpdate.Snap(_bubbleUpdate.Target);
         _shelfBubbleWidth.Snap(_shelfBubbleWidth.Target);
+        _normalTransition.Snap(_normalTransition.Target);
     }
 
     static double RubberBand(double distance, double limit) => limit * (1 - 1 / (distance * DragFollow / limit + 1));
@@ -279,11 +288,11 @@ public partial class MainWindow
         double split = _bubbleSplit.Value, bubble = Math.Max(_bubbleScale.Value, MinScale);
         double music = Math.Max(_bubbleMusic.Value, 0), record = Math.Max(_bubbleRecord.Value, 0);
         double timer = Math.Max(_bubbleTimer.Value, 0), shelf = Math.Max(_bubbleShelf.Value, 0);
+        double update = Math.Max(_bubbleUpdate.Value, 0);
 
-        bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal && music > 0;
         double musicWidth = _musicBubbleWidth.Value;
-        double[] weights = [music, record, timer, shelf];
-        double[] widths = [musicWidth, RecordBubbleWidth, TimerBubbleWidth, _shelfBubbleWidth.Value];
+        double[] weights = [music, record, timer, shelf, update];
+        double[] widths = [musicWidth, RecordBubbleWidth, TimerBubbleWidth, _shelfBubbleWidth.Value, UpdateBubbleWidth];
         double total = 0, seams = 0;
         for (int i = 0; i < weights.Length; i++)
         {
@@ -296,34 +305,19 @@ public partial class MainWindow
             }
         }
         double wide = Math.Max(total - BubbleOverlap * seams, Bubble.Height);
-        bool apart = split > BubbleVisibleSplit;
+        bool apart = split > BubbleVisibleSplit && (music > 0 || record > 0 || timer > 0 || shelf > 0 || update > 0);
         Bubble.SetVisible(apart);
         Bubble.Width = wide;
         BubbleBody.Clip = Squircle.Of(new Rect(0, 0, wide, Bubble.Height), Bubble.Height / 2);
         BubbleMusic.Opacity = Math.Clamp(music * 2 - 1, 0, 1);
-        BubbleMusic.Width = isNormal ? Math.Max(musicWidth, 210) : musicWidth;
+        BubbleMusic.Width = musicWidth;
         BubbleGlow.Width = wide;
         BubbleGlow.Height = Bubble.Height;
 
-        if (isNormal)
-        {
-            BubbleMusicInfo.SetVisible(true);
-            BubbleCoverBox.Margin = new Thickness(8, 0, 0, 0);
-            BubbleEq.Opacity = Math.Clamp(music * 2 - 1, 0, 1);
-            string title = _media.HasTrack ? _media.Name : "";
-            if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(TitleBig.Text)) title = TitleBig.Text;
-            BubbleMusicTitle.Text = title;
-            string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
-            BubbleMusicArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
-        }
-        else
-        {
-            BubbleMusicInfo.SetVisible(false);
-            // чем уже пузырь, тем ближе обложка к середине, а эквалайзер гаснет: в кружке остаётся одна обложка
-            double open = Math.Clamp((musicWidth - MusicMiniWidth) / (MusicBubbleWidth - MusicMiniWidth), 0, 1);
-            BubbleCoverBox.Margin = new Thickness(6 + 2 * open, 0, 0, 0);
-            BubbleEq.Opacity = Math.Clamp(open * 2 - 1, 0, 1);
-        }
+        BubbleMusicInfo.SetVisible(false);
+        double open = Math.Clamp((musicWidth - MusicMiniWidth) / (MusicBubbleWidth - MusicMiniWidth), 0, 1);
+        BubbleCoverBox.Margin = new Thickness(6 + 2 * open, 0, 0, 0);
+        BubbleEq.Opacity = Math.Clamp(open * 2 - 1, 0, 1);
 
         BubbleRecord.Opacity = Math.Clamp(record * 2 - 1, 0, 1);
         BubbleTimer.Opacity = Math.Clamp(timer * 2 - 1, 0, 1);
@@ -332,32 +326,90 @@ public partial class MainWindow
         BubbleTimer.Margin = new Thickness(afterMusic + (RecordBubbleWidth - BubbleOverlap) * record, 0, 0, 0);
         BubbleShelf.Opacity = Math.Clamp(shelf * 2 - 1, 0, 1);
         BubbleShelf.Margin = new Thickness(0, 0, ShelfBubblePadding + (ShelfBubblePaddingWithTimer - ShelfBubblePadding) * Math.Clamp(Math.Max(timer, record), 0, 1), 0);
-        
+        BubbleUpdate.Opacity = Math.Clamp(update * 2 - 1, 0, 1);
+        BubbleUpdate.SetVisible(update > 0.05);
+        double afterItems = afterMusic + (RecordBubbleWidth - BubbleOverlap) * record + (TimerBubbleWidth - BubbleOverlap) * timer + (_shelfBubbleWidth.Value - BubbleOverlap) * shelf;
+        BubbleUpdate.Margin = new Thickness(afterItems, 0, 0, 0);
+
         BubbleScale.ScaleX = BubbleScale.ScaleY = bubble;
         BubbleBody.Opacity = _growing ? Math.Clamp(1 - _bubbleGrow.Value * 4, 0, 1) : Math.Clamp(split * 4 - 3, 0, 1);
         Bubble.IsHitTestVisible = split > BubbleClickableSplit && !_growing;
 
-        Rect shape;
-        if (isNormal)
+        // Верхний пузырь ВСЕГДА позиционируется сбоку от основного острова
+        double tuck = Math.Max(r - Bubble.Height / 2, 0) * BubbleTuckFactor * (1 - Math.Clamp(split, 0, 1)) * scale;
+        BubbleMove.X = _growing ? _growBubbleX : (pill.Width * scale - wide) / 2 + (BubbleGap + wide) * split - tuck + (Settings.DiscordMusicState == DiscordMusicState.Normal ? 0 : _bubbleDrag.Value);
+        BubbleMove.Y = Settings.DiscordMusicState == DiscordMusicState.Normal ? 0 : _bubbleDragY.Value;
+        double past = ((BubbleGap + wide) * split - wide - tuck + (Settings.DiscordMusicState == DiscordMusicState.Normal ? 0 : _bubbleDrag.Value)) / scale;
+        Rect shape = apart ? new Rect(pill.Right + past, (Settings.DiscordMusicState == DiscordMusicState.Normal ? 0 : _bubbleDragY.Value) / scale, wide * bubble / scale, Bubble.Height * bubble / scale) : Rect.Empty;
+
+        if (_growing && _bottomMusicRect.IsEmpty) shape = SwallowedPill(pill, scale);
+        else _bubbleRect = shape;
+
+        // Нижний остров музыки (нормальный режим под Дискордом)
+        double normProg = Math.Clamp(_normalTransition.Value, 0, 1);
+        Rect bottomShape = Rect.Empty;
+        if (normProg > 0.01 && WantsMusicBubble())
         {
-            BubbleMove.X = _growing ? _growBubbleX : _bubbleDrag.Value;
-            BubbleMove.Y = (pill.Bottom + BubbleGap) * split + _bubbleDragY.Value;
-            double shapeX = (HostWidth - wide) / 2 + _bubbleDrag.Value / scale;
-            double shapeY = (pill.Bottom + BubbleGap) * split + _bubbleDragY.Value / scale;
-            shape = apart ? new Rect(shapeX, shapeY, wide * bubble / scale, Bubble.Height * bubble / scale) : Rect.Empty;
+            BottomMusic.SetVisible(true);
+            double bottomScale = Math.Max(_bottomMusicScale.Value, MinScale);
+            BottomMusicScale.ScaleX = BottomMusicScale.ScaleY = bottomScale;
+            double normWidth = 210;
+            BottomMusic.Width = normWidth;
+            BottomMusicBody.Clip = Squircle.Of(new Rect(0, 0, normWidth, 34), 17);
+            BottomMusicGlow.Width = normWidth;
+            BottomMusicGlow.Height = 34;
+
+            double sideMusicX = (pill.Width * scale - normWidth) / 2 + (BubbleGap + wide) * split - tuck;
+            double targetBottomX = _growing ? _growBubbleX : (pill.Width * scale - normWidth) / 2 + _bubbleDrag.Value;
+            double targetBottomY = (pill.Bottom + BubbleGap) * normProg + _bubbleDragY.Value;
+
+            BottomMusicMove.X = sideMusicX + (targetBottomX - sideMusicX) * normProg;
+            BottomMusicMove.Y = targetBottomY;
+            BottomMusic.Opacity = Math.Clamp(normProg * 2 - 0.5, 0, 1);
+            BottomMusic.IsHitTestVisible = normProg > 0.7 && !_growing;
+
+            string title = _media.HasTrack ? _media.Name : "";
+            if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(TitleBig.Text)) title = TitleBig.Text;
+            NormalMusicTitle.Text = title;
+            string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
+            NormalMusicArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
+
+            double bottomShapeX = (HostWidth - normWidth) / 2 + _bubbleDrag.Value / scale;
+            double bottomShapeY = (pill.Bottom + BubbleGap) * normProg + _bubbleDragY.Value / scale;
+            bottomShape = new Rect(bottomShapeX, bottomShapeY, normWidth * bottomScale / scale, 34 * bottomScale / scale);
         }
         else
         {
-            double tuck = Math.Max(r - Bubble.Height / 2, 0) * BubbleTuckFactor * (1 - Math.Clamp(split, 0, 1)) * scale;
-            BubbleMove.X = _growing ? _growBubbleX : (pill.Width * scale - wide) / 2 + (BubbleGap + wide) * split - tuck + _bubbleDrag.Value;
-            BubbleMove.Y = _bubbleDragY.Value;
-            double past = ((BubbleGap + wide) * split - wide - tuck + _bubbleDrag.Value) / scale;
-            shape = apart ? new Rect(pill.Right + past, _bubbleDragY.Value / scale, wide * bubble / scale, Bubble.Height * bubble / scale) : Rect.Empty;
+            BottomMusic.SetVisible(false);
         }
+        _bottomMusicRect = bottomShape;
 
-        if (_growing) shape = SwallowedPill(pill, scale);
-        else _bubbleRect = shape;
-        Body.SetShape(pill, r, shape);
+        // Goo отрисовывает подложки и ободки для пилюли, верхнего пузыря и нижнего острова музыки
+        Body.SetShape(pill, r, shape, bottomShape);
+
+        // Единая виртуальная система координат волны (Aura) на все острова и части
+        double minLeft = pill.Left;
+        double maxRight = pill.Right;
+        if (!shape.IsEmpty)
+        {
+            minLeft = Math.Min(minLeft, shape.Left);
+            maxRight = Math.Max(maxRight, shape.Right);
+        }
+        if (!bottomShape.IsEmpty)
+        {
+            minLeft = Math.Min(minLeft, bottomShape.Left);
+            maxRight = Math.Max(maxRight, bottomShape.Right);
+        }
+        double clusterWidth = Math.Max(maxRight - minLeft, pill.Width);
+
+        CompactGlow.VirtualWidth = clusterWidth;
+        CompactGlow.VirtualOffset = pill.Left - minLeft;
+
+        BubbleGlow.VirtualWidth = clusterWidth;
+        BubbleGlow.VirtualOffset = (!shape.IsEmpty ? shape.Left : 0) - minLeft;
+
+        BottomMusicGlow.VirtualWidth = clusterWidth;
+        BottomMusicGlow.VirtualOffset = (!bottomShape.IsEmpty ? bottomShape.Left : 0) - minLeft;
     }
 
     /// <summary>
@@ -369,9 +421,9 @@ public partial class MainWindow
         if (_bubbleRect.IsEmpty || _pillRect.IsEmpty || ShapeOf(_view).Height < CompactMaxHeight) return;
 
         double scale = Math.Max(_scale.Value, MinScale);
-        Rect bubble = _bubbleRect;
+        Rect bubble = !_bottomMusicRect.IsEmpty && _normalTransition.Value > 0.5 ? _bottomMusicRect : _bubbleRect;
         _growFrom = _pillRect;
-        _growBubbleX = BubbleMove.X;
+        _growBubbleX = !_bottomMusicRect.IsEmpty && _normalTransition.Value > 0.5 ? BottomMusicMove.X : BubbleMove.X;
         _growing = true;
 
         // остров начинает как пузырь: тот же размер и то же место, а прежний размер пилюли остаётся в «капле»
