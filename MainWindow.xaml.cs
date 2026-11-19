@@ -98,7 +98,7 @@ public partial class MainWindow : Window
     static readonly TimeSpan AwayDuration = TimeSpan.FromSeconds(5);
 
     readonly Dictionary<View, FrameworkElement> _views;
-    readonly SolidColorBrush _dim, _orange, _green, _red, _indigo;
+    readonly SolidColorBrush _dim, _orange, _green, _red, _indigo, _shelfTint;
     readonly AudioService _audio = new();
     readonly MediaService _media;
     readonly DiscordService _discord;
@@ -177,6 +177,7 @@ public partial class MainWindow : Window
         ];
         _timerTint = new SolidColorBrush(_orange.Color);
         _recordTint = new SolidColorBrush(_red.Color);
+        _shelfTint = new SolidColorBrush(_indigo.Color);
         _lyricBlock = LyricA;
 
         _forcedView = Enum.TryParse(Argument("--view"), true, out View forced) ? forced : null;
@@ -214,6 +215,7 @@ public partial class MainWindow : Window
         PrepareWeatherHours();
         ApplyTimerTint();
         ApplyRecordTint();
+        ApplyShelfTint();
         TuneDragSprings(false);
         _ticker.Tick += (_, _) => OnTick();
         Loaded += OnLoaded;
@@ -612,6 +614,11 @@ public partial class MainWindow : Window
         }
         EndGrowFromBubble();
         ShowPanel(Panel.None);
+    }
+
+    void ApplyShelfTint()
+    {
+        BubbleShelfIcon.Fill = BubbleShelfText.Foreground = MenuShelf.Foreground = _shelfTint;
     }
 
     void ReturnFromAway()

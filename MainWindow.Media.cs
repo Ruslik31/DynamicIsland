@@ -42,7 +42,7 @@ public partial class MainWindow
 
     Color AccentColor => Settings.Accent ?? _media.Accent;
 
-    bool IsEqVisible => MediaSpots.ContainsKey(_view) || BubbleMusicShown;
+    bool IsEqVisible => MediaSpots.ContainsKey(_view) || BubbleMusicShown || (Settings.CompactMusicAnimation && _media.IsPlaying);
 
     bool BubbleMusicShown => _bubbleMusic.Target > 0 && _bubbleSplit.Target > 0;
 
@@ -171,7 +171,7 @@ public partial class MainWindow
     {
         bool show = Settings.CompactMusicAnimation && _media.IsPlaying;
         CompactGlow.SetVisible(show && _view != View.MediaBig);
-        BubbleGlow.SetVisible(show && BubbleMusicShown);
+        BubbleGlow.SetVisible(show && (BubbleMusicShown || _shelf.Items.Count > 0 || _countdown.IsActive || _obs.Recording));
     }
 
     void SyncEq()

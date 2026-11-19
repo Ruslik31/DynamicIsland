@@ -229,6 +229,7 @@ public partial class MainWindow
 
         _dragOver = true;
         _panelBeforeDrag = _panel;
+        _shelfTint.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_green.Color, Ms(200)));
         SelectPanel(Panel.Shelf);
         SyncShelfHint();
         UpdateView();
@@ -253,6 +254,7 @@ public partial class MainWindow
     void EndDragOver()
     {
         _dragOver = false;
+        _shelfTint.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_indigo.Color, Ms(200)));
         SyncShelfHint();
     }
 

@@ -29,7 +29,7 @@ public partial class MainWindow
     readonly Spring _userScale = new(Settings.Scale / 100.0, 240, 26), _topGap = new(Settings.Gap, 240, 26);
     readonly Spring _bubbleSplit = new(0), _bubbleScale = new(1, 320, 20);
     readonly Spring _lyricSnapX = new(0, 200, 28), _lyricSnapY = new(0, 200, 28);
-    readonly Spring _musicBubbleWidth = new(Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth, 260, 24), _bubbleDrag = new(0, 700, 50), _bubbleDragY = new(0, 700, 50);
+    readonly Spring _musicBubbleWidth = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 210 : Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth, 260, 24), _bubbleDrag = new(0, 700, 50), _bubbleDragY = new(0, 700, 50);
     readonly Spring _bubbleMusic = new(0, 260, 24), _bubbleRecord = new(0, 260, 24), _bubbleTimer = new(0, 260, 24), _bubbleShelf = new(0, 260, 24), _shelfBubbleWidth = new(ShelfBubbleWidth, 260, 24);
     readonly BlurEffect _motionBlur = new() { Radius = 0, RenderingBias = RenderingBias.Performance };
     readonly FrameLoop _shapeLoop;
@@ -299,16 +299,20 @@ public partial class MainWindow
         bool apart = split > BubbleVisibleSplit;
         Bubble.SetVisible(apart);
         Bubble.Width = wide;
+        BubbleBody.Clip = Squircle.Of(new Rect(0, 0, wide, Bubble.Height), Bubble.Height / 2);
         BubbleMusic.Opacity = Math.Clamp(music * 2 - 1, 0, 1);
-        BubbleMusic.Width = musicWidth;
+        BubbleMusic.Width = isNormal ? Math.Max(musicWidth, 210) : musicWidth;
         BubbleGlow.Width = wide;
+        BubbleGlow.Height = Bubble.Height;
 
         if (isNormal)
         {
             BubbleMusicInfo.SetVisible(true);
             BubbleCoverBox.Margin = new Thickness(8, 0, 0, 0);
             BubbleEq.Opacity = Math.Clamp(music * 2 - 1, 0, 1);
-            BubbleMusicTitle.Text = _media.HasTrack ? _media.Name : "";
+            string title = _media.HasTrack ? _media.Name : "";
+            if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(TitleBig.Text)) title = TitleBig.Text;
+            BubbleMusicTitle.Text = title;
             string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
             BubbleMusicArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
         }

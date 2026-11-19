@@ -1184,7 +1184,7 @@
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Tray"/>
                                 <TextBlock Style="{StaticResource RowLabel}" Text="Полка"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <local:Digits x:Name="MenuShelf" Foreground="{StaticResource Dim}" VerticalAlignment="Center"/>
+                                    <local:Digits x:Name="MenuShelf" Foreground="{StaticResource Indigo}" VerticalAlignment="Center"/>
                                     <local:Icon Style="{StaticResource RowChevron}" Margin="8,1,0,0"/>
                                 </StackPanel>
                             </Grid>
@@ -1775,16 +1775,16 @@
                     <TranslateTransform x:Name="BubbleMove"/>
                 </TransformGroup>
             </Border.RenderTransform>
-            <Grid x:Name="BubbleBody" ClipToBounds="True">
-                <Grid x:Name="BubbleMusic" Width="66" HorizontalAlignment="Left">
-                    <local:Aura x:Name="BubbleGlow" Height="34" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" IsHitTestVisible="False" Visibility="Collapsed"/>
+            <Grid x:Name="BubbleBody">
+                <local:Aura x:Name="BubbleGlow" Height="34" VerticalAlignment="Bottom" HorizontalAlignment="Left" IsHitTestVisible="False" Visibility="Collapsed"/>
+                <Grid x:Name="BubbleMusic" HorizontalAlignment="Left">
                     <Grid x:Name="BubbleCoverBox" Width="22" Height="22" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
                         <Border Background="{StaticResource ArtPlaceholder}" CornerRadius="6"/>
                         <local:Cover x:Name="BubbleArt" Radius="6"/>
                     </Grid>
-                    <StackPanel x:Name="BubbleMusicInfo" Margin="36,0,32,0" VerticalAlignment="Center" Visibility="Collapsed">
-                        <TextBlock x:Name="BubbleMusicTitle" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="BubbleMusicArtist" FontSize="10" Foreground="{StaticResource Dim}" TextTrimming="CharacterEllipsis" Margin="0,-1,0,0"/>
+                    <StackPanel x:Name="BubbleMusicInfo" Margin="36,0,34,0" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="BubbleMusicTitle" Foreground="White" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="BubbleMusicArtist" Foreground="{StaticResource Dim}" FontSize="10" TextTrimming="CharacterEllipsis" Margin="0,-1,0,0"/>
                     </StackPanel>
                     <local:Equalizer x:Name="BubbleEq" Bars="8" Few="5" Width="19" Height="14" IsHitTestVisible="False"
                                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
@@ -1803,8 +1803,8 @@
                 </Grid>
                 <StackPanel x:Name="BubbleShelf" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center"
                             Margin="0,0,13,0">
-                    <local:Icon Kind="Tray" Width="15" Height="15" VerticalAlignment="Center"/>
-                    <local:Digits x:Name="BubbleShelfText" Text="0" FontSize="12.5" FontWeight="SemiBold"
+                    <local:Icon x:Name="BubbleShelfIcon" Kind="Tray" Width="15" Height="15" Fill="{StaticResource Indigo}" VerticalAlignment="Center"/>
+                    <local:Digits x:Name="BubbleShelfText" Text="0" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource Indigo}"
                                   VerticalAlignment="Center" Margin="4,0,0,0"/>
                 </StackPanel>
             </Grid>
