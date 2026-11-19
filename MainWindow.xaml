@@ -1833,7 +1833,7 @@
                         <local:Cover x:Name="NormalArt" Radius="6"/>
                     </Grid>
                     <Canvas x:Name="NormalLyricBox" Height="34" Margin="36,0,41,0"
-                            Background="Transparent" ClipToBounds="True" IsHitTestVisible="False"
+                            Background="Transparent" ClipToBounds="False" IsHitTestVisible="False"
                             SizeChanged="NormalLyricBox_SizeChanged">
                         <Canvas.OpacityMask>
                             <LinearGradientBrush x:Name="NormalLyricMask" MappingMode="Absolute" StartPoint="0,0" EndPoint="133,0">

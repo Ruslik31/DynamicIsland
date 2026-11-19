@@ -357,6 +357,11 @@ public partial class MainWindow
             double normWidth = Math.Max(_bottomMusicWidth.Value, CompactMediaWidth);
             BottomMusic.Width = normWidth;
             NormalMusicContent.Width = normWidth;
+            CentreNormalLyrics();
+            double normBox = Math.Max(normWidth - LyricInset, 2 * LyricFadeEdge);
+            NormalLyricMask.EndPoint = new Point(normBox, 0);
+            NormalLyricMaskIn.Offset = LyricFadeEdge / normBox;
+            NormalLyricMaskOut.Offset = 1 - LyricFadeEdge / normBox;
             BottomMusicBody.Clip = Squircle.Of(new Rect(0, 0, normWidth, 34), 17);
             BottomMusicGlow.Width = normWidth;
             BottomMusicGlow.Height = 34;

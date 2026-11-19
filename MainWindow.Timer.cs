@@ -349,7 +349,11 @@ public partial class MainWindow
             }
             else
             {
-                if (dropNormal) Settings.DiscordMusicState = DiscordMusicState.Normal;
+                if (dropNormal)
+                {
+                    Settings.DiscordMusicState = DiscordMusicState.Normal;
+                    UpdateLyric(true);
+                }
                 else if (dropArmed) Settings.DiscordMusicState = Settings.DiscordMusicState == DiscordMusicState.Mini ? DiscordMusicState.Compact : DiscordMusicState.Mini;
             }
             UpdateTargets();

@@ -486,6 +486,7 @@ public partial class MainWindow : Window
         {
             _musicBubbleWanted = musicBubble;
             UpdateTargets();
+            if (musicBubble && Settings.DiscordMusicState == DiscordMusicState.Normal) UpdateLyric(true);
         }
 
         SyncEq();

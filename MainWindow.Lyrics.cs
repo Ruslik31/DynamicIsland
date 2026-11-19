@@ -126,7 +126,7 @@ public partial class MainWindow
 
             if (hasLyrics)
             {
-                if (!ReferenceEquals(lines, _normalLyricLines) || index != _normalLyricIndex || named != _normalLyricNamed || snap)
+                if (!ReferenceEquals(lines, _normalLyricLines) || index != _normalLyricIndex || (named && title != _normalLyricTitle) || named != _normalLyricNamed || snap)
                 {
                     _normalLyricLines = lines;
                     _normalLyricIndex = index;
@@ -168,6 +168,8 @@ public partial class MainWindow
         double targetWidth = text.Length == 0
             ? CompactMediaWidth
             : Math.Clamp(width + 2 * LyricFadeEdge + LyricInset, CompactMediaWidth, MaxCompactMediaWidth);
+        next.IslandWidth = targetWidth;
+        CentreNormalLyrics();
 
         if (!snap) _bottomMusicWidth.Tune(280, 28);
         else _bottomMusicWidth.Snap(targetWidth);
@@ -181,6 +183,13 @@ public partial class MainWindow
         next.Offset.BeginAnimation(TranslateTransform.XProperty, overflow > 0 ? CreateLyricScroll(overflow, seconds) : null);
         next.Enter();
         StirLyrics();
+    }
+
+    void CentreNormalLyrics()
+    {
+        double curWidth = Math.Max(_bottomMusicWidth.Value, CompactMediaWidth);
+        NormalLyricA.Centring.X = (curWidth - (NormalLyricA.IslandWidth > 0 ? NormalLyricA.IslandWidth : curWidth)) / 2;
+        NormalLyricB.Centring.X = (curWidth - (NormalLyricB.IslandWidth > 0 ? NormalLyricB.IslandWidth : curWidth)) / 2;
     }
 
     void ShowLyric(string text, double seconds, bool snap, bool named)
