@@ -59,7 +59,7 @@ public partial class MainWindow : Window
         [View.Voice] = new(64, 34, 17),
         [View.VoiceBig] = new(360, 170, 38),
         [View.Message] = new(340, 72, 31),
-        [View.Discord] = new(320, 254, 34),
+        [View.Discord] = new(300, 340, 34),
         [View.DiscordVoice] = new(340, 296, 34),
         [View.DiscordMessages] = new(340, 298, 34),
     };
@@ -172,7 +172,7 @@ public partial class MainWindow : Window
         _spotSprings = [_coverLeft, _coverTop, _coverSize, _barsRight, _barsCenterY, _barsWidth, _barsHeight, _barsOpen];
         _springs =
         [
-            _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleGrow, _islandShift, _bubbleDrag, _musicBubbleWidth, _bubbleMusic, _bubbleRecord, _bubbleTimer, _bubbleShelf, _shelfBubbleWidth,
+            _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleGrow, _islandShift, _bubbleDrag, _bubbleDragY, _musicBubbleWidth, _bubbleMusic, _bubbleRecord, _bubbleTimer, _bubbleShelf, _shelfBubbleWidth,
             _shelfScroll, _lookScroll, _updateNotesScroll, _volumeOvershoot, _moveX, _coverScale, _coverSnapX, _coverSnapY, _lyricSnapX, _lyricSnapY, .. _spotSprings,
         ];
         _timerTint = new SolidColorBrush(_orange.Color);
@@ -492,6 +492,7 @@ public partial class MainWindow : Window
 
     void MorphTo(View target)
     {
+        EndGrowFromBubble();
         View previous = _view;
         PillShape from = ShapeOf(previous);
         _view = target;
@@ -561,6 +562,7 @@ public partial class MainWindow : Window
         View.Weather => PillShapes[view] with { Height = WeatherView.Height },
         View.Place => PillShapes[view] with { Height = PlaceView.Height },
         View.Look => PillShapes[view] with { Height = LookView.Height },
+        View.Discord => PillShapes[view] with { Height = DiscordPage.Height },
         _ => PillShapes[view],
     };
 
@@ -602,6 +604,7 @@ public partial class MainWindow : Window
             _collapseTimeout.Start(TimeSpan.FromSeconds(_shrinkGraceUntil - _clock.Elapsed.TotalSeconds));
             return;
         }
+        EndGrowFromBubble();
         ShowPanel(Panel.None);
     }
 

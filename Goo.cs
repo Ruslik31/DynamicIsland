@@ -145,9 +145,18 @@ public sealed class Goo : FrameworkElement
 
     Geometry? CreateNeck()
     {
-        var c1 = new Point(_pill.Right - _radius, _pill.Top + _radius);
-        var c2 = new Point(_bubble.Left + _bubble.Height / 2, _bubble.Top + _bubble.Height / 2);
-        return c2.X > c1.X ? Neck(c1, _radius - RimWidth, c2, _bubble.Height / 2 - RimWidth, TearGap) : null;
+        if (_bubble.Top >= _pill.Bottom - TearGap)
+        {
+            var c1 = new Point((_pill.Left + _pill.Right) / 2, _pill.Bottom - Math.Min(_radius, _pill.Height / 2));
+            var c2 = new Point((_bubble.Left + _bubble.Right) / 2, _bubble.Top + _bubble.Height / 2);
+            return c2.Y > c1.Y ? Neck(c1, Math.Min(_radius, _pill.Height / 2) - RimWidth, c2, _bubble.Height / 2 - RimWidth, TearGap) : null;
+        }
+        else
+        {
+            var c1 = new Point(_pill.Right - _radius, _pill.Top + _radius);
+            var c2 = new Point(_bubble.Left + _bubble.Height / 2, _bubble.Top + _bubble.Height / 2);
+            return c2.X > c1.X ? Neck(c1, _radius - RimWidth, c2, _bubble.Height / 2 - RimWidth, TearGap) : null;
+        }
     }
 
     public static Geometry? Neck(Point c1, double r1, Point c2, double r2, double tearGap)

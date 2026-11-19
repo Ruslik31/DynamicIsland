@@ -95,6 +95,7 @@ public partial class MainWindow
 
     // Окно едет вслед за курсором, поэтому отсчитываем от экрана, а не от окна: внутри окна курсор при этом стоит на месте
     double CursorX => Native.CursorPosition.X / VisualTreeHelper.GetDpi(this).DpiScaleX;
+    double CursorY => Native.CursorPosition.Y / VisualTreeHelper.GetDpi(this).DpiScaleY;
 
     void BeginMove()
     {

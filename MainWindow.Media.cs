@@ -47,7 +47,7 @@ public partial class MainWindow
     bool BubbleMusicShown => _bubbleMusic.Target > 0 && _bubbleSplit.Target > 0;
 
     /// <summary>Во время звонка играющая музыка висит пузырём рядом с островом.</summary>
-    bool WantsMusicBubble() => ShowsVoice && IsMediaActive && Settings.DiscordMusicBubble && _view != View.Media;
+    bool WantsMusicBubble() => ShowsVoice && IsMediaActive && Settings.DiscordMusicBubble && _view != View.Media && _view != View.MediaBig && _panel != Panel.Player;
 
     void OnMediaChanged()
     {
@@ -65,6 +65,8 @@ public partial class MainWindow
         string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
         TitleBig.Text = ToastTitle.Text = title;
         ArtistBig.Text = ToastArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
+        BubbleMusicTitle.Text = title;
+        BubbleMusicArtist.Text = ArtistBig.Text;
 
         if (!ReferenceEquals(_cover, _media.Art))
         {
@@ -149,6 +151,7 @@ public partial class MainWindow
         Color[] palette = Settings.Accent is { } own ? CoverPalette.Around(own) : _media.Palette;
         Glow.Tint(palette, time);
         CompactGlow.Tint(palette, time);
+        BubbleGlow.Tint(palette, time);
         PlayerMatrix.Tint(palette, time);
         PlayerLyricWait.Tint(palette, time);
         foreach (RadioButton tile in BackdropStrip.Children) ((BackdropPreview)tile.Content).Tint(palette);
@@ -166,7 +169,9 @@ public partial class MainWindow
 
     void SyncCompactAnimation()
     {
-        CompactGlow.SetVisible(Settings.CompactMusicAnimation && _media.IsPlaying && _view == View.Media);
+        bool show = Settings.CompactMusicAnimation && _media.IsPlaying;
+        CompactGlow.SetVisible(show && _view != View.MediaBig);
+        BubbleGlow.SetVisible(show && BubbleMusicShown);
     }
 
     void SyncEq()
@@ -191,6 +196,7 @@ public partial class MainWindow
         if (BubbleMusicShown) moving |= BubbleEq.Tick(bands, level, playing, now, dt);
         moving |= Settings.Backdrop == Backdrop.Glow ? Glow.Tick(Eq, now, dt) : AdvanceBackdrop(bands, playing, now, dt);
         if (CompactGlow.IsVisible) moving |= CompactGlow.Tick(Eq, now, dt);
+        if (BubbleGlow.IsVisible) moving |= BubbleGlow.Tick(Eq, now, dt);
         return IsEqVisible && (playing || moving);
     }
 

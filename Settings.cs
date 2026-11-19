@@ -53,6 +53,13 @@ enum SeekHover
     Wave,
 }
 
+enum DiscordMusicState
+{
+    Mini = 0,
+    Compact = 1,
+    Normal = 2,
+}
+
 static class Settings
 {
     const string Key = @"Software\DiscordIsland";
@@ -67,6 +74,7 @@ static class Settings
     static int _position = Math.Clamp(Read(nameof(Position), 0), -MaxPosition, MaxPosition);
     static bool _discordEnabled = ReadSwitch(nameof(DiscordEnabled), true);
     static bool _discordMusicBubble = ReadSwitch(nameof(DiscordMusicBubble)), _discordMusicMini = ReadSwitch(nameof(DiscordMusicMini), false);
+    static int _discordMusicState = Math.Clamp(Read(nameof(DiscordMusicState), _discordMusicMini ? (int)DiscordMusicState.Mini : (int)DiscordMusicState.Compact), 0, 2);
     static bool _music = ReadSwitch(nameof(Music));
     static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
     static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), false), _discordInGames = ReadSwitch(nameof(DiscordInGames));
@@ -126,11 +134,28 @@ static class Settings
         set => Write(nameof(DiscordMusicBubble), _discordMusicBubble = value);
     }
 
+    public static DiscordMusicState DiscordMusicState
+    {
+        get => (DiscordMusicState)_discordMusicState;
+        set
+        {
+            Write(nameof(DiscordMusicState), _discordMusicState = (int)value);
+            _discordMusicMini = value == DiscordMusicState.Mini;
+            Write(nameof(DiscordMusicMini), _discordMusicMini);
+        }
+    }
+
     /// <summary>Пузырь музыки сжат в маленький кружок с обложкой: его перетаскивают на остров, чтобы сжать или развернуть.</summary>
     public static bool DiscordMusicMini
     {
-        get => _discordMusicMini;
-        set => Write(nameof(DiscordMusicMini), _discordMusicMini = value);
+        get => _discordMusicState == (int)DiscordMusicState.Mini;
+        set
+        {
+            _discordMusicMini = value;
+            _discordMusicState = value ? (int)DiscordMusicState.Mini : (int)DiscordMusicState.Compact;
+            Write(nameof(DiscordMusicMini), value);
+            Write(nameof(DiscordMusicState), _discordMusicState);
+        }
     }
 
     /// <summary>Остров показывает голосовой канал, пока вы в звонке.</summary>

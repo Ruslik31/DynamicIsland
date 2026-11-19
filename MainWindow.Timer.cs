@@ -25,8 +25,8 @@ public partial class MainWindow
     bool _pauseIconShown = true;
     int _setupMinutes = 25, _shownSeconds = -1;
     const double MaxBubbleDragBack = 24, BubbleDragExtra = 8, BubbleDropShare = 0.6;
-    bool _bubbleHovered, _bubblePressed, _bubbleDragging, _bubbleDropArmed;
-    double _bubbleDownX;
+    bool _bubbleHovered, _bubblePressed, _bubbleDragging, _bubbleDropArmed, _bubbleDropToNormal, _bubbleDropToCompact;
+    double _bubbleDownX, _bubbleDownY;
     Panel _bubbleDownPanel;
 
     void ApplyTimerTint()
@@ -214,34 +214,76 @@ public partial class MainWindow
         e.Handled = true;
         _bubblePressed = true;
         _bubbleDragging = false;
+        _bubbleDropToNormal = _bubbleDropToCompact = _bubbleDropArmed = false;
         _bubbleDownX = CursorX;
+        _bubbleDownY = CursorY;
         _bubbleDownPanel = BubblePanelAt(e.GetPosition(Bubble).X);
         if (_bubbleDownPanel == Panel.Player) Bubble.CaptureMouse();
         UpdateTargets();
     }
 
-    /// <summary>Пузырь музыки можно взять и перенести на остров: он сожмётся в кружок или развернётся обратно.</summary>
+    /// <summary>Пузырь музыки можно взять и перенести на остров: он сожмётся в кружок, развернётся в нормальный или компактный.</summary>
     void Bubble_MouseMove(object sender, MouseEventArgs e)
     {
         if (!_bubblePressed || _bubbleDownPanel != Panel.Player || !Bubble.IsMouseCaptured) return;
 
         double size = Math.Max(_userScale.Value, MinScale);
-        double moved = (CursorX - _bubbleDownX) / size;
-        if (!_bubbleDragging && Math.Abs(moved) < DragThreshold) return;
+        double movedX = (CursorX - _bubbleDownX) / size;
+        double movedY = (CursorY - _bubbleDownY) / size;
+        if (!_bubbleDragging && Math.Abs(movedX) < DragThreshold && Math.Abs(movedY) < DragThreshold) return;
 
         _bubbleDragging = true;
+        bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal;
 
-        // Пузырь можно лишь прижать к острову, с «резиновым» сопротивлением: уйдя целиком в тело острова, он слился бы с ним и пропал бы из виду
-        double reach = BubbleGap + Bubble.Width / 2 + BubbleDragExtra;
-        double pull = RubberBand(Math.Max(-moved, 0), reach);
-        _bubbleDrag.Target = -pull + Math.Min(Math.Max(moved, 0), MaxBubbleDragBack);
-
-        // дотянули достаточно: пузырь уже показывает, каким станет, и если отпустить, останется таким
-        bool armed = pull >= reach * BubbleDropShare;
-        if (armed != _bubbleDropArmed)
+        if (isNormal)
         {
-            _bubbleDropArmed = armed;
-            UpdateTargets();
+            // Нормальный остров музыки находится под дискордом. При перетаскивании вверх он подтягивается к дискорду и сжимается в компактный
+            double reach = BubbleGap + Bubble.Height / 2 + BubbleDragExtra;
+            double pull = RubberBand(Math.Max(-movedY, 0), reach);
+            _bubbleDragY.Target = -pull + Math.Min(Math.Max(movedY, 0), MaxBubbleDragBack);
+            _bubbleDrag.Target = RubberBand(movedX, 40);
+
+            bool armed = pull >= reach * BubbleDropShare || movedY < -15;
+            if (armed != _bubbleDropToCompact)
+            {
+                _bubbleDropToCompact = armed;
+                UpdateTargets();
+            }
+        }
+        else
+        {
+            // Пузырь сбоку (мини или компактный).
+            // При перетаскивании вниз он вытягивается в нормальный остров под дискордом
+            double reachY = 50;
+            double pullY = RubberBand(Math.Max(movedY, 0), reachY);
+            _bubbleDragY.Target = pullY;
+
+            bool armedToNormal = pullY >= reachY * BubbleDropShare || movedY > 20;
+            if (armedToNormal != _bubbleDropToNormal)
+            {
+                _bubbleDropToNormal = armedToNormal;
+                UpdateTargets();
+            }
+
+            if (!_bubbleDropToNormal)
+            {
+                // При перетаскивании влево на остров переключается между кружком и пилюлей
+                double reachX = BubbleGap + Bubble.Width / 2 + BubbleDragExtra;
+                double pullX = RubberBand(Math.Max(-movedX, 0), reachX);
+                _bubbleDrag.Target = -pullX + Math.Min(Math.Max(movedX, 0), MaxBubbleDragBack);
+
+                bool armed = pullX >= reachX * BubbleDropShare;
+                if (armed != _bubbleDropArmed)
+                {
+                    _bubbleDropArmed = armed;
+                    UpdateTargets();
+                }
+            }
+            else
+            {
+                _bubbleDrag.Target = 0;
+                _bubbleDropArmed = false;
+            }
         }
         StartShapeLoop();
     }
@@ -251,15 +293,25 @@ public partial class MainWindow
         if (!_bubblePressed) return;
         e.Handled = true;
 
-        // ReleaseMouseCapture сразу вызывает LostMouseCapture, который сбрасывает перетаскивание: сначала запоминаем, чем всё кончилось
-        bool dragged = _bubbleDragging, dropped = dragged && _bubbleDropArmed;
-        _bubblePressed = _bubbleDragging = _bubbleDropArmed = false;
+        bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal;
+        bool dragged = _bubbleDragging;
+        bool dropNormal = _bubbleDropToNormal, dropCompact = _bubbleDropToCompact, dropArmed = _bubbleDropArmed;
+        _bubblePressed = _bubbleDragging = _bubbleDropArmed = _bubbleDropToNormal = _bubbleDropToCompact = false;
         Bubble.ReleaseMouseCapture();
 
         if (dragged)
         {
             _bubbleDrag.Target = 0;
-            if (dropped) Settings.DiscordMusicMini = !Settings.DiscordMusicMini;
+            _bubbleDragY.Target = 0;
+            if (isNormal)
+            {
+                if (dropCompact) Settings.DiscordMusicState = DiscordMusicState.Compact;
+            }
+            else
+            {
+                if (dropNormal) Settings.DiscordMusicState = DiscordMusicState.Normal;
+                else if (dropArmed) Settings.DiscordMusicState = Settings.DiscordMusicState == DiscordMusicState.Mini ? DiscordMusicState.Compact : DiscordMusicState.Mini;
+            }
             UpdateTargets();
             return;
         }
@@ -274,8 +326,9 @@ public partial class MainWindow
     void Bubble_LostMouseCapture(object sender, MouseEventArgs e)
     {
         if (!_bubbleDragging) return;
-        _bubbleDragging = _bubblePressed = _bubbleDropArmed = false;
+        _bubbleDragging = _bubblePressed = _bubbleDropArmed = _bubbleDropToNormal = _bubbleDropToCompact = false;
         _bubbleDrag.Target = 0;
+        _bubbleDragY.Target = 0;
         UpdateTargets();
     }
 }

@@ -129,6 +129,8 @@ public partial class MainWindow
         WeatherSwitch.Set(Settings.Weather, animate);
         FullscreenSwitch.Set(Settings.HideFullscreen, animate);
         AutostartSwitch.Set(Autostart.Enabled, animate);
+        CompactMusicAnimationSwitch.Set(Settings.CompactMusicAnimation, animate);
+        CollapseDelaySegments.Set(Settings.CollapseDelayChoice, animate);
 
         for (int i = 0; i < SourceChips.Children.Count; i++)
             ((ToggleButton)SourceChips.Children[i]).IsChecked = Settings.LyricSources.HasFlag((LyricSource)(1 << i));

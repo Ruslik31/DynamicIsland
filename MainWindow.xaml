@@ -478,6 +478,7 @@
             <Border x:Name="Pill" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Top"/>
 
             <Grid x:Name="Host">
+                <local:Aura x:Name="CompactGlow" Height="34" VerticalAlignment="Top" HorizontalAlignment="Center" IsHitTestVisible="False" Visibility="Collapsed"/>
 
                 <Grid x:Name="IdleView" Width="118" Height="34" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:Digits x:Name="IdleClock" Text="00:00" FontSize="13.5" FontWeight="SemiBold"
@@ -485,7 +486,6 @@
                 </Grid>
 
                 <Grid x:Name="MediaView" Width="210" Height="34" HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <local:Aura x:Name="CompactGlow" Height="34" VerticalAlignment="Bottom" IsHitTestVisible="False" Visibility="Collapsed"/>
                     <Canvas x:Name="LyricBox" Height="34" Margin="36,0,41,0"
                             Background="Transparent" ClipToBounds="True" IsHitTestVisible="False"
                             SizeChanged="LyricBox_SizeChanged">
@@ -944,7 +944,7 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid x:Name="DiscordPage" Width="320" Height="294" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="DiscordPage" Width="300" Height="340" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="DISCORD" Click="DiscordBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="DiscordEnabled_Click">
@@ -1395,7 +1395,7 @@
                                 <Button Style="{StaticResource RowButton}" Click="CollapseDelay_Click">
                                     <Grid>
                                         <local:Icon Style="{StaticResource RowIcon}" Kind="Timer"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Сворачивание вне окна, сек"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Сворачивание, сек" Margin="38,0,130,0" TextTrimming="CharacterEllipsis"/>
                                         <local:Segments x:Name="CollapseDelaySegments" Style="{StaticResource RowSegments}" Labels="0.5|1.5|3|5"/>
                                     </Grid>
                                 </Button>
@@ -1715,10 +1715,15 @@
             </Border.RenderTransform>
             <Grid x:Name="BubbleBody" ClipToBounds="True">
                 <Grid x:Name="BubbleMusic" Width="66" HorizontalAlignment="Left">
+                    <local:Aura x:Name="BubbleGlow" Height="34" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" IsHitTestVisible="False" Visibility="Collapsed"/>
                     <Grid x:Name="BubbleCoverBox" Width="22" Height="22" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="8,0,0,0">
                         <Border Background="{StaticResource ArtPlaceholder}" CornerRadius="6"/>
                         <local:Cover x:Name="BubbleArt" Radius="6"/>
                     </Grid>
+                    <StackPanel x:Name="BubbleMusicInfo" Margin="36,0,32,0" VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock x:Name="BubbleMusicTitle" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="BubbleMusicArtist" FontSize="10" Foreground="{StaticResource Dim}" TextTrimming="CharacterEllipsis" Margin="0,-1,0,0"/>
+                    </StackPanel>
                     <local:Equalizer x:Name="BubbleEq" Bars="8" Few="5" Width="19" Height="14" IsHitTestVisible="False"
                                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 </Grid>
