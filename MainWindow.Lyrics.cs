@@ -48,6 +48,7 @@ public partial class MainWindow
     LyricsService.Line[] _normalLyricLines = [];
     int _normalLyricIndex = -1;
     string _normalLyricTitle = "";
+    bool _normalLyricNamed;
     bool _normalLyricShowsTitle;
     CompactLyric _normalLyricBlock;
     LyricsService.Line[] _playerLines = [];
@@ -121,22 +122,30 @@ public partial class MainWindow
         if (hasNormalMusic)
         {
             bool hasLyrics = Settings.Lyrics && lines.Length > 0;
-            NormalLyricBox.SetVisible(hasLyrics);
             NormalMusicInfo.SetVisible(!hasLyrics);
 
             if (hasLyrics)
             {
-                if (!ReferenceEquals(lines, _normalLyricLines) || index != _normalLyricIndex || (named && title != _normalLyricTitle) || snap)
+                if (!ReferenceEquals(lines, _normalLyricLines) || index != _normalLyricIndex || named != _normalLyricNamed || snap)
                 {
                     _normalLyricLines = lines;
                     _normalLyricIndex = index;
+                    _normalLyricNamed = named;
                     _normalLyricTitle = title;
                     ShowNormalLyric(named ? title : text, seconds, snap, named);
                 }
             }
             else
             {
-                _bottomMusicWidth.Target = CompactMediaWidth;
+                _normalLyricLines = [];
+                _normalLyricIndex = -1;
+                _normalLyricNamed = false;
+                _normalLyricTitle = "";
+                if (_bottomMusicWidth.Target != CompactMediaWidth)
+                {
+                    _bottomMusicWidth.Target = CompactMediaWidth;
+                    StartShapeLoop();
+                }
             }
         }
     }
@@ -163,6 +172,7 @@ public partial class MainWindow
         if (!snap) _bottomMusicWidth.Tune(280, 28);
         else _bottomMusicWidth.Snap(targetWidth);
         _bottomMusicWidth.Target = targetWidth;
+        StartShapeLoop();
 
         double box = targetWidth - LyricInset;
         double overflow = width - (box - 2 * LyricFadeEdge);
