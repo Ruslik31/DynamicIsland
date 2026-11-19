@@ -1129,7 +1129,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="MenuView" Width="300" Height="420" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="MenuView" Width="300" Height="390" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,14,10,0">
                         <TextBlock Style="{StaticResource Caption}" Text="DISCORD ISLAND" Margin="12,0,0,6"/>
                         <Button Style="{StaticResource MenuRowButton}" Click="DiscordRow_Click" local:RowList.Edge="Top">
@@ -1168,7 +1168,6 @@
                             </UniformGrid>
                         </Border>
 
-                        <TextBlock Style="{StaticResource MenuSectionCaption}" Text="ИНСТРУМЕНТЫ"/>
                         <Button Style="{StaticResource MenuRowButton}" Click="RecordRow_Click">
                             <Grid>
                                 <local:Icon x:Name="MenuRecordIcon" Style="{StaticResource RowIcon}" Kind="Record"/>
@@ -1206,11 +1205,10 @@
                                 <local:Icon Style="{StaticResource RowChevron}"/>
                             </Grid>
                         </Button>
-                        <TextBlock Style="{StaticResource MenuSectionCaption}" Text="НАСТРОЙКИ"/>
                         <Button Style="{StaticResource MenuRowButton}" Click="SettingsRow_Click">
                             <Grid>
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Gear"/>
-                                <TextBlock Style="{StaticResource RowLabel}" Text="Общие"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Настройки"/>
                                 <local:Icon Style="{StaticResource RowChevron}"/>
                             </Grid>
                         </Button>
@@ -1230,7 +1228,7 @@
                     </local:RowList>
                 </Grid>
 
-                <Grid x:Name="SettingsView" Width="320" Height="414" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="SettingsView" Width="320" Height="460" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="НАСТРОЙКИ" Click="SettingsBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="Music_Click">
@@ -1816,7 +1814,7 @@
         </Border>
 
         <Border x:Name="BottomMusic" Width="210" Height="34" CornerRadius="17" Visibility="Collapsed"
-                Background="Transparent" Padding="1"
+                Background="Black" Padding="1"
                 HorizontalAlignment="Center" VerticalAlignment="Top" RenderTransformOrigin="0,0"
                 MouseEnter="BottomMusic_MouseEnter" MouseLeave="BottomMusic_MouseLeave"
                 MouseLeftButtonDown="BottomMusic_MouseLeftButtonDown" MouseLeftButtonUp="BottomMusic_MouseLeftButtonUp"

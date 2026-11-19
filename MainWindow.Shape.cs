@@ -359,11 +359,11 @@ public partial class MainWindow
             BottomMusicGlow.Width = normWidth;
             BottomMusicGlow.Height = 34;
 
-            double sideMusicX = (pill.Width * scale - normWidth) / 2 + (BubbleGap + wide) * split - tuck;
-            double targetBottomX = _growing ? _growBubbleX : (pill.Width * scale - normWidth) / 2 + _bubbleDrag.Value;
+            double sideOffset = (pill.Width * scale + normWidth) / 2 + BubbleGap * split - tuck;
+            double curX = sideOffset * (1 - normProg) + (_growing ? _growBubbleX : _bubbleDrag.Value);
             double targetBottomY = (pill.Bottom + BubbleGap) * normProg + _bubbleDragY.Value;
 
-            BottomMusicMove.X = sideMusicX + (targetBottomX - sideMusicX) * normProg;
+            BottomMusicMove.X = curX;
             BottomMusicMove.Y = targetBottomY;
             BottomMusic.Opacity = Math.Clamp(normProg * 2 - 0.5, 0, 1);
             BottomMusic.IsHitTestVisible = normProg > 0.7 && !_growing;
@@ -374,7 +374,7 @@ public partial class MainWindow
             string artist = string.IsNullOrWhiteSpace(_media.Artist) ? UnknownArtist : _media.Artist;
             NormalMusicArtist.Text = _sourceName.Length > 0 ? _sourceName + " · " + artist : artist;
 
-            double bottomShapeX = (HostWidth - normWidth) / 2 + _bubbleDrag.Value / scale;
+            double bottomShapeX = (HostWidth - normWidth) / 2 + curX / scale;
             double bottomShapeY = (pill.Bottom + BubbleGap) * normProg + _bubbleDragY.Value / scale;
             bottomShape = new Rect(bottomShapeX, bottomShapeY, normWidth * bottomScale / scale, 34 * bottomScale / scale);
         }
