@@ -40,7 +40,7 @@ public partial class MainWindow
     bool _morphing, _growing;
     double _growBubbleX;
     Rect _pillRect = Rect.Empty, _bubbleRect = Rect.Empty, _growFrom = Rect.Empty;
-    readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24), _normalTransition = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 1 : 0, 240, 24), _bottomMusicScale = new(1, 320, 20);
+    readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24), _normalTransition = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 1 : 0, 240, 24), _bottomMusicScale = new(1, 320, 20), _bottomMusicWidth = new(CompactMediaWidth, 280, 28);
     bool _bottomMusicHovered, _bottomMusicPressed, _bottomMusicDragging, _bottomMusicDropToCompact;
     double _bottomMusicDownX, _bottomMusicDownY;
     Rect _bottomMusicRect = Rect.Empty;
@@ -79,6 +79,7 @@ public partial class MainWindow
 
         bool isNormal = Settings.DiscordMusicState == DiscordMusicState.Normal && music;
         _normalTransition.Target = isNormal ? 1 : 0;
+        if (!isNormal) _bottomMusicWidth.Target = CompactMediaWidth;
 
         // В верхнем пузыре музыка видна только когда она НЕ в нормальном (нижнем) режиме!
         bool bubbleHasMusic = music && !isNormal;
@@ -353,7 +354,7 @@ public partial class MainWindow
             BottomMusic.SetVisible(true);
             double bottomScale = Math.Max(_bottomMusicScale.Value, MinScale);
             BottomMusicScale.ScaleX = BottomMusicScale.ScaleY = bottomScale;
-            double normWidth = 210;
+            double normWidth = Math.Max(_bottomMusicWidth.Value, CompactMediaWidth);
             BottomMusic.Width = normWidth;
             NormalMusicContent.Width = normWidth;
             BottomMusicBody.Clip = Squircle.Of(new Rect(0, 0, normWidth, 34), 17);

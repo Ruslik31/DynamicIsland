@@ -134,6 +134,10 @@ public partial class MainWindow
                     ShowNormalLyric(named ? title : text, seconds, snap, named);
                 }
             }
+            else
+            {
+                _bottomMusicWidth.Target = CompactMediaWidth;
+            }
         }
     }
 
@@ -152,8 +156,15 @@ public partial class MainWindow
         double width = next.DesiredSize.Width;
         Canvas.SetTop(next, Math.Round((NormalLyricBox.Height - next.DesiredSize.Height) / 2));
 
-        double box = NormalMusicContent.Width - LyricInset;
-        if (box <= 0) box = 210 - LyricInset;
+        double targetWidth = text.Length == 0
+            ? CompactMediaWidth
+            : Math.Clamp(width + 2 * LyricFadeEdge + LyricInset, CompactMediaWidth, MaxCompactMediaWidth);
+
+        if (!snap) _bottomMusicWidth.Tune(280, 28);
+        else _bottomMusicWidth.Snap(targetWidth);
+        _bottomMusicWidth.Target = targetWidth;
+
+        double box = targetWidth - LyricInset;
         double overflow = width - (box - 2 * LyricFadeEdge);
 
         next.Offset.X = overflow > 0 ? LyricFadeEdge : (box - width) / 2;
