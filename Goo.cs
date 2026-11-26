@@ -12,39 +12,24 @@ public sealed class Goo : FrameworkElement
     const double NeckGrip = 0.5;
     const double NeckHandle = 2.4;
     const double Tolerance = 0.02;
+    const byte TintedAlpha = 0x8C;
     const double HazeOpacity = 0.14;
     const byte GlassAlpha = 0x48;
-    const double SpecularReach = 74;
-    const double SpecularRimOpacity = 0.48;
 
-    static readonly Color PlainTop = Color.FromArgb(0x38, 0xFF, 0xFF, 0xFF);
-    static readonly Color PlainMid = Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF);
-    static readonly Color PlainBottom = Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF);
-    static readonly Color GlassTop = Color.FromArgb(0x64, 0xFF, 0xFF, 0xFF);
-    static readonly Color GlassMid = Color.FromArgb(0x16, 0xFF, 0xFF, 0xFF);
-    static readonly Color GlassBottom = Color.FromArgb(0x34, 0xFF, 0xFF, 0xFF);
+    static readonly Color PlainRim = Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF);
     static readonly double[] HazeReach = [2, 3, 4];
     static readonly (double At, double Level)[] FlashFrames = [(0, 0), (0.04, 1), (0.13, 0.3), (0.19, 0.9), (0.5, 0), (1, 0)];
 
-    readonly LinearGradientBrush _rim = CreateRimBrush();
-    readonly RadialGradientBrush _specularBrush = CreateSpecularBrush();
-    readonly SolidColorBrush _fill = new(Colors.Black);
+    readonly SolidColorBrush _rim = new(PlainRim), _fill = new(Colors.Black);
     readonly Light _flash = new();
-    readonly Pen _edge, _specularEdge;
+    readonly Pen _edge;
 
     Rect _pill = Rect.Empty, _bubble = Rect.Empty, _extra = Rect.Empty;
     double _radius;
-    bool _glass;
-    Color[]? _palette;
-    Point? _pointer;
     Geometry? _innerGeometry, _outerGeometry, _bevelRingGeometry;
     Geometry[] _innerParts = [];
 
-    public Goo()
-    {
-        _edge = new Pen(_rim, 2 * RimWidth) { LineJoin = PenLineJoin.Round };
-        _specularEdge = new Pen(_specularBrush, 2 * RimWidth) { LineJoin = PenLineJoin.Round };
-    }
+    public Goo() => _edge = new Pen(_rim, 2 * RimWidth) { LineJoin = PenLineJoin.Round };
 
     public Geometry? InnerGeometry => _innerGeometry;
 
@@ -63,24 +48,15 @@ public sealed class Goo : FrameworkElement
 
     public void Tint(IReadOnlyList<Color>? palette, Duration time)
     {
-        _palette = palette is { Count: > 0 } ? [.. palette] : null;
-        ApplyRimColors(time);
-    }
-
-    public void SetPointer(Point? at)
-    {
-        if (_pointer == at) return;
-        _pointer = at;
-        InvalidateVisual();
+        Color to = palette is { Count: > 0 } p ? Color.FromArgb(TintedAlpha, p[0].R, p[0].G, p[0].B) : PlainRim;
+        _rim.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(to, time));
     }
 
     public void Thin(bool glass, Duration time, Action thinned)
     {
-        _glass = glass;
         var fade = new ColorAnimation(Color.FromArgb(glass ? GlassAlpha : byte.MaxValue, 0, 0, 0), time);
         fade.Completed += (_, _) => thinned();
         _fill.BeginAnimation(SolidColorBrush.ColorProperty, fade);
-        ApplyRimColors(time);
     }
 
     public void StartFlashing(Color color, TimeSpan round)
@@ -223,38 +199,6 @@ public sealed class Goo : FrameworkElement
         return ring;
     }
 
-    void ApplyRimColors(Duration time)
-    {
-        Color top, mid, mid2, bottom;
-
-        if (_palette is { Length: > 0 } p)
-        {
-            Color c0 = p[0];
-            Color c1 = p[Math.Min(1, p.Length - 1)];
-            Color c2 = p[Math.Min(2, p.Length - 1)];
-
-            top = Brighten(c0, 0.25).WithAlpha(_glass ? 0.68 : 0.62);
-            mid = c1.WithAlpha(_glass ? 0.24 : 0.30);
-            mid2 = c2.WithAlpha(_glass ? 0.28 : 0.36);
-            bottom = Brighten(c0, 0.12).WithAlpha(_glass ? 0.48 : 0.46);
-        }
-        else
-        {
-            top = _glass ? GlassTop : PlainTop;
-            mid = _glass ? GlassMid : PlainMid;
-            mid2 = mid;
-            bottom = _glass ? GlassBottom : PlainBottom;
-        }
-
-        AnimateStop(_rim, 0, top, time);
-        AnimateStop(_rim, 1, mid, time);
-        AnimateStop(_rim, 2, mid2, time);
-        AnimateStop(_rim, 3, bottom, time);
-    }
-
-    static void AnimateStop(LinearGradientBrush brush, int index, Color to, Duration time) =>
-        brush.GradientStops[index].BeginAnimation(GradientStop.ColorProperty, new ColorAnimation(to, time));
-
     protected override void OnRender(DrawingContext dc)
     {
         if (_innerParts.Length == 0) return;
@@ -275,12 +219,6 @@ public sealed class Goo : FrameworkElement
 
         dc.PushClip(outside);
         dc.DrawGeometry(null, _edge, body);
-        if (_pointer is { } at && bounds.Height > 44)
-        {
-            _specularBrush.Center = _specularBrush.GradientOrigin = at;
-            _specularBrush.RadiusX = _specularBrush.RadiusY = SpecularReach;
-            dc.DrawGeometry(null, _specularEdge, body);
-        }
         dc.DrawGeometry(null, _flash.Line, body);
         dc.Pop();
 
@@ -300,24 +238,6 @@ public sealed class Goo : FrameworkElement
             Mists = HazeReach.Select(reach => new Pen(Mist, 2 * reach) { LineJoin = PenLineJoin.Round }).ToArray();
         }
     }
-
-    static LinearGradientBrush CreateRimBrush()
-    {
-        var brush = new LinearGradientBrush { StartPoint = new Point(0.12, 0), EndPoint = new Point(0.88, 1) };
-        brush.GradientStops.Add(new GradientStop(PlainTop, 0));
-        brush.GradientStops.Add(new GradientStop(PlainMid, 0.32));
-        brush.GradientStops.Add(new GradientStop(PlainMid, 0.72));
-        brush.GradientStops.Add(new GradientStop(PlainBottom, 1));
-        return brush;
-    }
-
-    static RadialGradientBrush CreateSpecularBrush() =>
-        new(Colors.White.WithAlpha(SpecularRimOpacity), Colors.Transparent) { MappingMode = BrushMappingMode.Absolute };
-
-    static Color Brighten(Color c, double share) => Color.FromRgb(
-        (byte)Math.Round(c.R + (255 - c.R) * share),
-        (byte)Math.Round(c.G + (255 - c.G) * share),
-        (byte)Math.Round(c.B + (255 - c.B) * share));
 
     static Geometry Outline(Rect rect, double radius)
     {

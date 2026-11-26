@@ -137,6 +137,11 @@ public partial class MainWindow
             }
             else
             {
+                if (_normalLyricLines.Length > 0)
+                {
+                    NormalLyricA.Leave(false);
+                    NormalLyricB.Leave(false);
+                }
                 _normalLyricLines = [];
                 _normalLyricIndex = -1;
                 _normalLyricNamed = false;
