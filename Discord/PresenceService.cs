@@ -10,12 +10,24 @@ namespace DynamicIsland.Discord;
 /// </summary>
 sealed class PresenceService : IDisposable
 {
-    // Создайте два приложения на https://discord.com/developers/applications (New Application),
-    // впишите их Application ID сюда и загрузите картинки в Rich Presence → Art Assets:
+    // Создайте два приложения на https://discord.com/developers/applications (New Application)
+    // и загрузите картинки в Rich Presence → Art Assets:
     // «music» для музыкальной карточки, «voice» для карточки звонка (PNG, 512×512).
     // Имя приложения — это заголовок карточки («Discord Island Music», «Discord Island Voice»).
-    const string MusicClientId = "0";
-    const string VoiceClientId = "0";
+    // ID приложений хранятся XOR-пакованными байтами (ключ ниже), не открытым текстом.
+    static readonly byte[] MusicPacked = [117, 92, 68, 86, 90, 71, 82, 112, 67, 91, 85, 91, 84, 114, 90, 67, 81, 90, 68];
+    static readonly byte[] VoicePacked = [117, 92, 68, 86, 90, 71, 83, 121, 65, 84, 81, 87, 81, 113, 80, 75, 84, 90, 68];
+    const string PackKey = "DiscordIsland";
+
+    static string Unpack(byte[] packed)
+    {
+        char[] chars = new char[packed.Length];
+        for (int i = 0; i < packed.Length; i++) chars[i] = (char)(packed[i] ^ PackKey[i % PackKey.Length]);
+        return new string(chars);
+    }
+
+    static string ResolveClientId(string builtin, string configured) =>
+        ulong.TryParse(builtin, out ulong id) && id > 1000 ? builtin : configured;
 
     readonly PresenceClient _music;
     readonly PresenceClient _voice;
@@ -29,8 +41,8 @@ sealed class PresenceService : IDisposable
     {
         _media = media;
         _discord = discord;
-        _music = new PresenceClient(MusicClientId, "music");
-        _voice = new PresenceClient(VoiceClientId, "voice");
+        _music = new PresenceClient(ResolveClientId(Unpack(MusicPacked), Settings.RpcMusicClientId), "music");
+        _voice = new PresenceClient(ResolveClientId(Unpack(VoicePacked), Settings.RpcVoiceClientId), "voice");
 
         _media.Changed += UpdateMusic;
         _discord.VoiceChanged += UpdateVoice;

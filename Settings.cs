@@ -281,6 +281,20 @@ static class Settings
         set => Write(nameof(RpcVoice), _rpcVoice = value);
     }
 
+    /// <summary>Application ID приложения Discord для музыкальной карточки (переопределяет встроенный).</summary>
+    public static string RpcMusicClientId
+    {
+        get => Read(nameof(RpcMusicClientId), "");
+        set => Write(nameof(RpcMusicClientId), value, RegistryValueKind.String);
+    }
+
+    /// <summary>Application ID приложения Discord для карточки звонка (переопределяет встроенный).</summary>
+    public static string RpcVoiceClientId
+    {
+        get => Read(nameof(RpcVoiceClientId), "");
+        set => Write(nameof(RpcVoiceClientId), value, RegistryValueKind.String);
+    }
+
     public static bool Dots
     {
         get => _dots;
