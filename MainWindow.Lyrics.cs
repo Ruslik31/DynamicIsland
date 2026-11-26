@@ -122,7 +122,7 @@ public partial class MainWindow
         if (hasNormalMusic)
         {
             bool hasLyrics = Settings.Lyrics && lines.Length > 0;
-            NormalMusicInfo.SetVisible(!hasLyrics);
+            NormalMusicInfo.SetVisible(!hasLyrics || named);
 
             if (hasLyrics)
             {
@@ -132,7 +132,7 @@ public partial class MainWindow
                     _normalLyricIndex = index;
                     _normalLyricNamed = named;
                     _normalLyricTitle = title;
-                    ShowNormalLyric(named ? title : text, seconds, snap, named);
+                    ShowNormalLyric(text, seconds, snap, named);
                 }
             }
             else
