@@ -293,6 +293,19 @@ public partial class MainWindow
         RefreshLookPage();
     }
 
+    void SeekGlow_Click(object sender, RoutedEventArgs e)
+    {
+        SeekPlain.Glow = SeekLines.Glow = Settings.SeekGlow = !Settings.SeekGlow;
+        RefreshLookPage();
+    }
+
+    void CompactProgress_Click(object sender, RoutedEventArgs e)
+    {
+        Settings.CompactProgress = (CompactProgress)CompactProgressSegments.PickUnderPointer();
+        RefreshLookPage();
+        UpdateMiniProgress();
+    }
+
     void BackdropRow_Click(object sender, RoutedEventArgs e) => ToggleLookTiles(BackdropTiles);
 
     void LyricChangeRow_Click(object sender, RoutedEventArgs e) => ToggleLookTiles(LyricChangeTiles);
@@ -408,6 +421,8 @@ public partial class MainWindow
         DotsSegments.Set(Settings.Dots ? 1 : 0, LookView.IsVisible);
         SeekStyleSegments.Set(Settings.LineBar ? 1 : 0, LookView.IsVisible);
         SeekHoverSegments.Set((int)Settings.SeekHover, LookView.IsVisible);
+        SeekGlowSwitch.Set(Settings.SeekGlow, LookView.IsVisible);
+        CompactProgressSegments.Set((int)Settings.CompactProgress, LookView.IsVisible);
         GlassSwitch.Set(Settings.Glass, LookView.IsVisible);
         CompactMusicAnimationSwitch.Set(Settings.CompactMusicAnimation, LookView.IsVisible);
         CollapseDelaySegments.Set(Settings.CollapseDelayChoice, LookView.IsVisible);
@@ -419,6 +434,7 @@ public partial class MainWindow
             Backdrop.Matrix => "Матрица",
             Backdrop.Stars => "Звёзды",
             Backdrop.MatrixAndStars => "Матрица и звёзды",
+            Backdrop.Cover => "Обложка",
             _ => "Свечение",
         };
         LyricChangeText.Text = Settings.LyricChange switch

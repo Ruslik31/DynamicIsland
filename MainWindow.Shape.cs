@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
@@ -22,6 +23,14 @@ public partial class MainWindow
     const double MaxMotionBlur = 4, MinMotionBlur = 0.1;
     const double CacheScaleTolerance = 0.001;
     const double ShadowReach = 100;
+    const double PullHandleBottomInset = 6.5;
+    const double PullHandleAppearDistance = 10;
+    const double PullHandleHiddenWidth = 12, PullHandleMinWidth = 14, PullHandleProgressWidth = 14;
+    const double PullHandleReadyWidth = 35, PullHandleOpenWidth = 44, PullHandleOverWidth = 7;
+    const double PullHandleHiddenHeight = 2.2, PullHandleMinHeight = 2.4, PullHandleProgressHeight = 0.3;
+    const double PullHandleReadyHeight = 3.0, PullHandleOpenHeight = 2.0;
+    const double PullHandleHiddenOffsetY = 3.0, PullHandleOverDip = 1.5, PullHandleMaxDriftX = 4;
+    const double PullHandleVisibleEpsilon = 0.004;
     static readonly TimeSpan GlassTime = TimeSpan.FromMilliseconds(300);
 
     readonly Spring _width = new(34), _height = new(34), _radius = new(17);
@@ -31,6 +40,8 @@ public partial class MainWindow
     readonly Spring _lyricSnapX = new(0, 200, 28), _lyricSnapY = new(0, 200, 28);
     readonly Spring _musicBubbleWidth = new(Settings.DiscordMusicMini ? MusicMiniWidth : MusicBubbleWidth, 260, 24), _bubbleDrag = new(0, 700, 50), _bubbleDragY = new(0, 700, 50);
     readonly Spring _bubbleMusic = new(0, 260, 24), _bubbleRecord = new(0, 260, 24), _bubbleTimer = new(0, 260, 24), _bubbleShelf = new(0, 260, 24), _bubbleUpdate = new(0, 260, 24), _shelfBubbleWidth = new(ShelfBubbleWidth, 260, 24);
+    readonly Spring _pullHandleAlpha = new(0, 680, 52), _pullHandleWidth = new(PullHandleHiddenWidth, 500, 38), _pullHandleHeight = new(PullHandleHiddenHeight, 500, 38);
+    readonly Spring _pullHandleOffsetY = new(PullHandleHiddenOffsetY, 500, 38), _pullHandleDriftX = new(0, 500, 38);
     readonly BlurEffect _motionBlur = new() { Radius = 0, RenderingBias = RenderingBias.Performance };
     readonly FrameLoop _shapeLoop;
     readonly Glass _glass;
@@ -44,6 +55,7 @@ public partial class MainWindow
     bool _bottomMusicHovered, _bottomMusicPressed, _bottomMusicDragging, _bottomMusicDropToCompact;
     double _bottomMusicDownX, _bottomMusicDownY;
     Rect _bottomMusicRect = Rect.Empty;
+    bool _pullHandleActive, _pullHandleWasReady, _pullHandleOpened;
 
     void UpdateTargets()
     {
@@ -63,11 +75,110 @@ public partial class MainWindow
         if (dragging) TuneDragSprings(true);
         UpdateBubbleTargets(compact);
         SyncEq();
+        UpdatePullHandleTargets();
         _offsetY.Target = (_hiddenByFullscreen || _sentAway) && !_ringing ? -(shape.Height + OffscreenMargin + Settings.Gap * 100.0 / Settings.Scale) : 0;
         _scale.Target = dragging ? 1 : _pressed ? (compact ? PressedScale : PressedOpenScale) : _hovered && compact ? HoverScale : 1;
         _bubbleScale.Target = _bubblePressed ? PressedScale : _bubbleHovered ? HoverScale : 1;
         _bottomMusicScale.Target = _bottomMusicPressed ? PressedScale : _bottomMusicHovered ? HoverScale : 1;
         StartShapeLoop();
+    }
+
+    void UpdatePullHandleTargets()
+    {
+        bool pulling = _grab == Grab.Pull && _pull > DragThreshold;
+        bool ready = pulling && _pull >= PullToOpen;
+
+        if (pulling)
+        {
+            if (!_pullHandleActive)
+            {
+                _pullHandleOpened = false;
+                if (_pullHandleAlpha.Value < BarelyVisible)
+                {
+                    _pullHandleWidth.Snap(PullHandleHiddenWidth);
+                    _pullHandleHeight.Snap(PullHandleHiddenHeight);
+                    _pullHandleOffsetY.Snap(PullHandleHiddenOffsetY);
+                    _pullHandleDriftX.Snap(0);
+                }
+                _pullHandleAlpha.Tune(680, 52);
+                _pullHandleWidth.Tune(500, 38);
+                _pullHandleHeight.Tune(500, 38);
+                _pullHandleOffsetY.Tune(500, 38);
+                _pullHandleDriftX.Tune(500, 38);
+            }
+
+            if (ready != _pullHandleWasReady)
+            {
+                if (ready)
+                {
+                    _pullHandleWidth.Tune(440, 27);
+                    _pullHandleHeight.Tune(440, 30);
+                    _pullHandleOffsetY.Tune(440, 28);
+                    _pullHandleAlpha.Tune(680, 52);
+                    _pullHandleWidth.Velocity += 55;
+                    _pullHandleOffsetY.Velocity += 18;
+                }
+                else
+                {
+                    _pullHandleWidth.Tune(420, 35);
+                    _pullHandleHeight.Tune(420, 35);
+                    _pullHandleOffsetY.Tune(420, 35);
+                    _pullHandleAlpha.Tune(560, 47);
+                }
+            }
+
+            double raw = _pull - DragThreshold;
+            double progress = Math.Clamp(raw / (PullToOpen - DragThreshold), 0, 1);
+            double appear = Math.Clamp(raw / PullHandleAppearDistance, 0, 1);
+            double eased = 1 - (1 - progress) * (1 - progress);
+
+            if (ready)
+            {
+                double over = Math.Max(_pull - PullToOpen, 0);
+                _pullHandleAlpha.Target = 0.78;
+                _pullHandleWidth.Target = PullHandleReadyWidth + RubberBand(over, PullHandleOverWidth);
+                _pullHandleHeight.Target = PullHandleReadyHeight;
+                _pullHandleOffsetY.Target = RubberBand(over, PullHandleOverDip);
+            }
+            else
+            {
+                _pullHandleAlpha.Target = appear * (0.14 + 0.24 * progress);
+                _pullHandleWidth.Target = PullHandleMinWidth + PullHandleProgressWidth * eased;
+                _pullHandleHeight.Target = PullHandleMinHeight + PullHandleProgressHeight * progress;
+                _pullHandleOffsetY.Target = PullHandleHiddenOffsetY * (1 - appear);
+            }
+            _pullHandleDriftX.Target = Math.Sign(_pullDriftX) * RubberBand(Math.Abs(_pullDriftX), PullHandleMaxDriftX);
+        }
+        else if (_pullHandleActive || _pullHandleOpened)
+        {
+            if (_pullHandleOpened)
+            {
+                _pullHandleAlpha.Tune(980, 62);
+                _pullHandleWidth.Tune(440, 36);
+                _pullHandleHeight.Tune(480, 38);
+                _pullHandleOffsetY.Tune(440, 36);
+                _pullHandleDriftX.Tune(420, 34);
+                _pullHandleWidth.Target = PullHandleOpenWidth;
+                _pullHandleHeight.Target = PullHandleOpenHeight;
+                _pullHandleOffsetY.Target = PullHandleHiddenOffsetY;
+            }
+            else
+            {
+                _pullHandleAlpha.Tune(460, 42);
+                _pullHandleWidth.Tune(385, 35);
+                _pullHandleHeight.Tune(385, 35);
+                _pullHandleOffsetY.Tune(385, 35);
+                _pullHandleDriftX.Tune(360, 32);
+                _pullHandleWidth.Target = PullHandleHiddenWidth;
+                _pullHandleHeight.Target = PullHandleHiddenHeight;
+                _pullHandleOffsetY.Target = PullHandleHiddenOffsetY;
+            }
+            _pullHandleAlpha.Target = 0;
+            _pullHandleDriftX.Target = 0;
+        }
+
+        _pullHandleActive = pulling;
+        _pullHandleWasReady = ready;
     }
 
     void UpdateBubbleTargets(bool compact)
@@ -180,20 +291,15 @@ public partial class MainWindow
         Pill.Width = w;
         Pill.Height = h;
         Pill.CornerRadius = new CornerRadius(r);
-        Shadow.Opacity = Math.Clamp((h - CompactMaxHeight) / ShadowFadeHeight, 0, 1);
+        Canvas.SetLeft(BackdropBox, pill.Left);
+        BackdropBox.Width = w;
+        BackdropBox.Height = h;
+        Shadow.Opacity = 0.34 + 0.66 * Math.Clamp((h - CompactMaxHeight) / ShadowFadeHeight, 0, 1);
         CompactGlow.Width = w;
         CompactGlow.Height = Math.Min(h, 34);
         CompactGlow.Margin = new Thickness(0, h - CompactGlow.Height, 0, 0);
-        if (pill != _clipRect || r != _clipRadius)
-        {
-            _clipRect = pill;
-            _clipRadius = r;
-            Host.Clip = Shared.Clip = Shadow.Data = Squircle.Of(pill, r);
-            Shadow.Clip = _glass.IsOn ? Around(Shadow.Data) : null;
-        }
 
-        if (_view == View.Menu && (_menuTimerPresetsOpen || MenuTimerPresetClip.Height > 0))
-            ApplyMenuTimerPresets(Math.Clamp(h - PillShapes[View.Menu].Height, 0, MenuTimerPresets.Height));
+        if (_view == View.Menu && (_menuTimerPresetsOpen || MenuTimerPresetClip.Height > 0)) ApplyMenuTimerPresets(Math.Clamp(h - PillShapes[View.Menu].Height, 0, MenuTimerPresets.Height));
         FitMediaViews(w, h);
         if (_morphing) FitViews(w, h);
         ApplyMotionBlur();
@@ -210,7 +316,47 @@ public partial class MainWindow
 
         PlaceCoverAndBars(pill);
         PlaceBubble(pill, r, scale);
+        PlaceGestureHints(pill);
+
+        Geometry? outer = Body.OuterGeometry;
+        if (pill != _clipRect || r != _clipRadius || !ReferenceEquals(Shadow.Data, outer))
+        {
+            _clipRect = pill;
+            _clipRadius = r;
+            Geometry pillOutline = Squircle.Of(pill, r);
+            (Rect inside, double insideRadius) = Body.PillInside;
+            Geometry insideClip = inside.IsEmpty ? pillOutline : Squircle.Of(inside, insideRadius);
+            Host.Clip = Shared.Clip = pillOutline;
+            Backdrops.Clip = GestureHints.Clip = insideClip;
+            Shadow.Data = outer ?? pillOutline;
+            Shadow.Clip = _glass.IsOn ? Around(Shadow.Data) : null;
+        }
         CutGlass(dpi);
+    }
+
+    void PlaceGestureHints(Rect pill)
+    {
+        double handleAlpha = Math.Clamp(_pullHandleAlpha.Value, 0, 1);
+        bool showHandle = handleAlpha > PullHandleVisibleEpsilon;
+        PullHandle.SetVisible(showHandle);
+        if (showHandle)
+        {
+            double handleW = Math.Clamp(_pullHandleWidth.Value, 2, Math.Max(pill.Width - 16, 2));
+            double handleH = Math.Clamp(_pullHandleHeight.Value, 1, 6);
+            double centerX = pill.Left + pill.Width / 2 + _pullHandleDriftX.Value;
+            double centerY = pill.Bottom - PullHandleBottomInset + _pullHandleOffsetY.Value;
+
+            PullHandle.Opacity = handleAlpha;
+            PullHandle.Width = handleW;
+            PullHandle.Height = handleH;
+            PullHandle.CornerRadius = new CornerRadius(handleH / 2);
+            PullHandleMove.X = centerX - handleW / 2;
+            PullHandleMove.Y = centerY - handleH / 2;
+        }
+        else if (_pullHandleAlpha.Target <= 0)
+        {
+            _pullHandleOpened = false;
+        }
     }
 
     void SharpenLyricCache(double dpi)
@@ -250,7 +396,7 @@ public partial class MainWindow
         if (!_glass.IsOn || Body.TransformToAncestor(this) is not Transform place) return;
         Matrix toPixels = place.Value;
         toPixels.Scale(dpi, dpi);
-        _glass.Cut(Body.PillInside, Body.BubbleInside, Body.ExtraInside, toPixels);
+        _glass.Cut(Body.InnerGeometry, Body.BevelRingGeometry, Body.PillInside, Body.BubbleInside, Body.ExtraInside, toPixels);
     }
 
     void SyncGlass(bool animate)

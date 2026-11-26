@@ -97,7 +97,7 @@ public partial class MainWindow : Window
     static readonly TimeSpan LongCollapseDelay = TimeSpan.FromSeconds(2.5);
     static readonly TimeSpan AwayDuration = TimeSpan.FromSeconds(5);
 
-    readonly Dictionary<View, FrameworkElement> _views;
+    readonly Dictionary<View, FrameworkElement> _views, _backdrops;
     readonly SolidColorBrush _dim, _orange, _green, _red, _indigo, _shelfTint;
     readonly AudioService _audio = new();
     readonly MediaService _media;
@@ -169,10 +169,19 @@ public partial class MainWindow : Window
             [View.DiscordVoice] = DiscordVoicePage,
             [View.DiscordMessages] = DiscordMessagesPage,
         };
+        _backdrops = new()
+        {
+            [View.Media] = MiniWash,
+            [View.MediaBig] = MediaBigBackdrop,
+            [View.IdleBig] = ClockGlow,
+            [View.RecordBig] = RecordBackdrop,
+            [View.Weather] = WeatherBackdrop,
+        };
         _spotSprings = [_coverLeft, _coverTop, _coverSize, _barsRight, _barsCenterY, _barsWidth, _barsHeight, _barsOpen];
         _springs =
         [
             _width, _height, _radius, _scale, _offsetY, _userScale, _topGap, _bubbleSplit, _bubbleScale, _bubbleGrow, _islandShift, _bubbleDrag, _bubbleDragY, _musicBubbleWidth, _bubbleMusic, _bubbleRecord, _bubbleTimer, _bubbleShelf, _bubbleUpdate, _shelfBubbleWidth, _normalTransition, _bottomMusicScale, _bottomMusicWidth,
+            _pullHandleAlpha, _pullHandleWidth, _pullHandleHeight, _pullHandleOffsetY, _pullHandleDriftX,
             _shelfScroll, _lookScroll, _updateNotesScroll, _volumeOvershoot, _moveX, _coverScale, _coverSnapX, _coverSnapY, _lyricSnapX, _lyricSnapY, .. _spotSprings,
         ];
         _timerTint = new SolidColorBrush(_orange.Color);
@@ -236,17 +245,26 @@ public partial class MainWindow : Window
             view.Visibility = Visibility.Collapsed;
             view.Opacity = 0;
         }
+        foreach (FrameworkElement backdrop in _backdrops.Values)
+        {
+            backdrop.Visibility = Visibility.Collapsed;
+            backdrop.Opacity = 0;
+        }
         IdleView.Visibility = Visibility.Visible;
         IdleView.Opacity = 1;
 
         Shared.RenderTransform = CreateViewTransforms();
         ArtSpot.Clip = Squircle.Of(new Rect(0, 0, FullCoverSize, FullCoverSize), CoverRadius);
+        ArtGlow.Fill = _artGlowBrush;
+        ArtRing.Accent = _accentBrush;
         LyricBox.CacheMode = _lyricCache;
         Eq.Fill = BubbleEq.Fill = _accentBrush;
         Eq.Dots = BubbleEq.Dots = Settings.Dots;
         SeekLines.Accent = _accentBrush;
+        SeekPlain.Glow = SeekLines.Glow = Settings.SeekGlow;
         PlayerMatrix.Rounding = PillShapes[View.MediaBig].Radius;
         SyncBackdrop();
+        SyncTimerPresets();
         foreach (FrameworkElement icon in new FrameworkElement[] { PlayIcon, PauseIcon, TimerPlayIcon, TimerPauseIcon })
         {
             icon.RenderTransformOrigin = new Point(0.5, 0.5);
@@ -504,11 +522,7 @@ public partial class MainWindow : Window
         View previous = _view;
         PillShape from = ShapeOf(previous);
         _view = target;
-        if (target == View.Menu)
-        {
-            _menuTimerPresetsOpen = false;
-            ApplyMenuTimerPresets(0);
-        }
+        if (target == View.Menu) { _menuTimerPresetsOpen = false; ApplyMenuTimerPresets(0); }
         if (target == View.MediaBig) UpdatePlayerLyrics(true);
         else ShowLyricsPlaceholder(false);
 
@@ -528,6 +542,7 @@ public partial class MainWindow : Window
 
         _morphing = true;
         SwitchView(_views[target], MenuDirection(previous, target));
+        SwitchBackdrop(target);
         if (target == View.Place) BeginTyping();
         else if (previous == View.Place) EndTyping();
         MoveMediaSpot(previous, target, to);
@@ -571,12 +586,12 @@ public partial class MainWindow : Window
         View.Media => PillShapes[view] with { Width = _compactMediaWidth },
         View.MediaBig when _playerHasLyricRoom => PillShapes[view] with { Height = PlayerHeight + PlayerLyricsHeight },
         View.RecordSet => PillShapes[view] with { Width = RecordSetView.Width },
-        View.Menu when _menuTimerPresetsOpen => PillShapes[view] with { Height = PillShapes[view].Height + MenuTimerPresets.Height },
         View.Update => PillShapes[view] with { Height = UpdatePage.Height },
         View.Weather => PillShapes[view] with { Height = WeatherView.Height },
         View.Place => PillShapes[view] with { Height = PlaceView.Height },
         View.Look => PillShapes[view] with { Height = LookView.Height },
         View.Discord => PillShapes[view] with { Height = DiscordPage.Height },
+        View.Menu when _menuTimerPresetsOpen => PillShapes[view] with { Height = PillShapes[view].Height + MenuTimerPresets.Height },
         _ => PillShapes[view],
     };
 

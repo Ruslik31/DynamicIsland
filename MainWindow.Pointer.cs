@@ -25,7 +25,7 @@ public partial class MainWindow
     Point _grabStart, _pointerLast;
     double _pointerAt;
     Vector _pointerSpeed;
-    double _pull, _pressedAtX, _moveGrabX, _moveGrabOffset;
+    double _pull, _pullDriftX, _pressedAtX, _moveGrabX, _moveGrabOffset;
 
     void Island_MouseEnter(object sender, MouseEventArgs e)
     {
@@ -38,6 +38,7 @@ public partial class MainWindow
     void Island_MouseLeave(object sender, MouseEventArgs e)
     {
         _hovered = _pressed = false;
+        Body.SetPointer(null);
         StirLyrics();
         UpdateTargets();
         if (_panel != Panel.None)
@@ -67,6 +68,7 @@ public partial class MainWindow
     void Root_MouseMove(object sender, MouseEventArgs e)
     {
         StirLyrics();
+        Body.SetPointer(_hovered && _panel != Panel.None ? e.GetPosition(Body) : null);
         if (_grab == Grab.None) return;
         Point at = e.GetPosition(this);
         double now = _clock.Elapsed.TotalSeconds, dt = now - _pointerAt;
@@ -88,7 +90,11 @@ public partial class MainWindow
                 _morphing = true;
             }
         }
-        if (_grab == Grab.Pull) _pull = Math.Max(moved.Y, 0);
+        if (_grab == Grab.Pull)
+        {
+            _pull = Math.Max(moved.Y, 0);
+            _pullDriftX = moved.X;
+        }
         else FollowMove();
         UpdateTargets();
     }
@@ -130,6 +136,7 @@ public partial class MainWindow
             case Grab.Pull when DragDirection(pulled, pace.Y, PullToOpen) <= 0:
                 break;
             case Grab.Pull:
+                _pullHandleOpened = true;
                 ToggleOpen();
                 ThrowOpen(pace.Y);
                 break;
@@ -186,7 +193,7 @@ public partial class MainWindow
             Settings.Position = (int)Math.Round(target);
         }
         _grab = Grab.None;
-        _pull = 0;
+        _pull = _pullDriftX = 0;
         if (dragged) TuneDragSprings(false);
         Island.ReleaseMouseCapture();
     }
@@ -194,6 +201,7 @@ public partial class MainWindow
     void CancelGrab()
     {
         if (_grab == Grab.None) return;
+        _pullHandleOpened = false;
         ReleaseGrab();
         _pressed = false;
     }
@@ -205,7 +213,13 @@ public partial class MainWindow
         UpdateTargets();
     }
 
-    void Root_MouseRightButtonUp(object sender, MouseButtonEventArgs e) => ToggleMenu();
+    void Root_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        CancelGrab();
+        SelectPanel(_panel == Panel.Menu ? Panel.None : Panel.Menu);
+        UpdateSwitches(false);
+        UpdateView();
+    }
 
     void Root_MouseUp(object sender, MouseButtonEventArgs e)
     {

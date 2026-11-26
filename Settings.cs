@@ -11,6 +11,7 @@ enum Backdrop
     Matrix = 1,
     Stars = 2,
     MatrixAndStars = Matrix | Stars,
+    Cover = 4,
 }
 
 enum LyricChange
@@ -60,6 +61,13 @@ enum DiscordMusicState
     Normal = 2,
 }
 
+enum CompactProgress
+{
+    Off,
+    Ring,
+    Wash,
+}
+
 static class Settings
 {
     const string Key = @"Software\DiscordIsland";
@@ -81,6 +89,7 @@ static class Settings
     static bool _discordDm = ReadSwitch(nameof(DiscordDm)), _discordMention = ReadSwitch(nameof(DiscordMention));
     static bool _discordEveryone = ReadSwitch(nameof(DiscordEveryone), false), _discordPreview = ReadSwitch(nameof(DiscordPreview));
     static bool _discordQuietFocused = ReadSwitch(nameof(DiscordQuietFocused)), _discordLink = ReadSwitch(nameof(DiscordLink));
+    static bool _showMenuButton = ReadSwitch(nameof(ShowMenuButton));
     static int _discordAvatars = Math.Clamp(Read(nameof(DiscordAvatars), 1), 0, MaxAvatarChoice);
     static int _discordMessageTime = Math.Clamp(Read(nameof(DiscordMessageTime), 1), 0, MaxMessageSecondsChoice);
 
@@ -88,19 +97,20 @@ static class Settings
     static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen));
     static bool _rim = ReadSwitch(nameof(Rim)), _appVolume = ReadSwitch(nameof(AppVolume));
     static bool _weather = ReadSwitch(nameof(Weather));
-    static bool _showMenuButton = ReadSwitch(nameof(ShowMenuButton));
     static bool _pointerLyric = ReadSwitch(nameof(PointerLyric), false);
     static bool _lyricParting = ReadSwitch(nameof(LyricParting));
     static PointerLyricShape _pointerLyricShape = (PointerLyricShape)Math.Clamp(Read(nameof(PointerLyricShape), 0), 0, (int)PointerLyricShape.Line);
     static Place? _place = ReadPlace();
     static bool _dots = ReadSwitch(nameof(Dots), false);
     static bool _lineBar = ReadSwitch(nameof(LineBar));
+    static bool _seekGlow = ReadSwitch(nameof(SeekGlow));
     static bool _glass = ReadSwitch(nameof(Glass), false);
-    static Backdrop _backdrop = (Backdrop)Math.Clamp(Read(nameof(Backdrop), 0), 0, (int)Backdrop.MatrixAndStars);
+    static Backdrop _backdrop = (Backdrop)Math.Clamp(Read(nameof(Backdrop), 0), 0, (int)Backdrop.Cover);
     static LyricChange _lyricChange = (LyricChange)Math.Clamp(Read(nameof(LyricChange), (int)LyricChange.Wave), 0, (int)LyricChange.Drum);
     static LyricSource _lyricSources = Known((LyricSource)Read(nameof(LyricSources), (int)LyricSource.Usual));
     static Hover _hover = (Hover)Math.Clamp(Read(nameof(Hover), 0), 0, (int)Hover.Flow);
     static SeekHover _seekHover = (SeekHover)Math.Clamp(Read(nameof(SeekHover), 0), 0, (int)SeekHover.Wave);
+    static CompactProgress _compactProgress = (CompactProgress)Math.Clamp(Read(nameof(CompactProgress), (int)CompactProgress.Ring), 0, (int)CompactProgress.Wash);
     static int _scale = Math.Clamp(Read(nameof(Scale), DefaultScale), MinScale, MaxScale);
     static int _gap = Math.Clamp(Read(nameof(Gap), DefaultGap), 0, MaxGap);
     static int _accent = Read(nameof(Accent), 0);
@@ -223,6 +233,13 @@ static class Settings
         set => Write(nameof(DiscordLink), _discordLink = value);
     }
 
+    /// <summary>Кнопки «⋯» рядом с плеером и часами: открывают то же меню, что и правая кнопка мыши.</summary>
+    public static bool ShowMenuButton
+    {
+        get => _showMenuButton;
+        set => Write(nameof(ShowMenuButton), _showMenuButton = value);
+    }
+
     /// <summary>Номер варианта «сколько аватарок в свёрнутом острове».</summary>
     public static int DiscordAvatars
     {
@@ -269,6 +286,12 @@ static class Settings
         set => Write(nameof(LineBar), _lineBar = value);
     }
 
+    public static bool SeekGlow
+    {
+        get => _seekGlow;
+        set => Write(nameof(SeekGlow), _seekGlow = value);
+    }
+
     public static bool Glass
     {
         get => _glass;
@@ -303,6 +326,12 @@ static class Settings
     {
         get => _seekHover;
         set => Write(nameof(SeekHover), (int)(_seekHover = value));
+    }
+
+    public static CompactProgress CompactProgress
+    {
+        get => _compactProgress;
+        set => Write(nameof(CompactProgress), (int)(_compactProgress = value));
     }
 
     public static bool Lyrics
@@ -345,12 +374,6 @@ static class Settings
     {
         get => _appVolume;
         set => Write(nameof(AppVolume), _appVolume = value);
-    }
-
-    public static bool ShowMenuButton
-    {
-        get => _showMenuButton;
-        set => Write(nameof(ShowMenuButton), _showMenuButton = value);
     }
 
     public static bool Network
