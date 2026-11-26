@@ -6,18 +6,9 @@ using System.Windows.Media;
 
 namespace DynamicIsland;
 
-public enum RowEdge
-{
-    None,
-    Top = 1,
-    Bottom = -1,
-}
-
 public sealed class RowList : StackPanel
 {
     const double Radius = 12;
-    const double TopRadius = 25, BottomRadius = 21, InnerRadius = 7;
-    const double EdgeOpacity = 0.75;
     const double HoverOpacity = 0.12, PressOpacity = 0.21;
     const double PressInsetX = 5, PressInsetY = 2;
     const double AppearSquish = 0.6;
@@ -26,17 +17,9 @@ public sealed class RowList : StackPanel
 
     static readonly Brush RimBrush = CreateRimBrush();
 
-    public static readonly DependencyProperty EdgeProperty = DependencyProperty.RegisterAttached(
-        "Edge", typeof(RowEdge), typeof(RowList), new PropertyMetadata(RowEdge.None));
-
-    public static RowEdge GetEdge(DependencyObject element) => (RowEdge)element.GetValue(EdgeProperty);
-
-    public static void SetEdge(DependencyObject element, RowEdge value) => element.SetValue(EdgeProperty, value);
-
     readonly SolidColorBrush _fill = new(Colors.White) { Opacity = 0 };
     readonly Spring _top = new(0), _bottom = new(0);
     readonly Spring _shown = new(0), _squish = new(0);
-    readonly Spring _edge = new(0, 300, 26);
     readonly FrameLoop _loop;
     Rect _rect = Rect.Empty;
     bool _lit, _pressed;
@@ -62,8 +45,7 @@ public sealed class RowList : StackPanel
         double shown = Math.Clamp(_shown.Value, 0, 1);
         if (shown < 0.005 || _rect.Width <= 1 || _rect.Height <= 1) return;
 
-        double edge = Math.Clamp(_edge.Value, -1, 1);
-        Geometry pill = edge != 0 ? EdgeOutline(_rect, edge) : Squircle.Of(_rect, Radius);
+        Geometry pill = Squircle.Of(_rect, Radius);
         dc.DrawGeometry(_fill, null, pill);
 
         Rect rimRect = Rect.Inflate(_rect, -RimThickness / 2, -RimThickness / 2);
@@ -99,12 +81,10 @@ public sealed class RowList : StackPanel
     void MoveTo(ButtonBase row)
     {
         double top = VisualTreeHelper.GetOffset(row).Y, bottom = top + row.RenderSize.Height;
-        double edge = (double)GetEdge(row);
         if (_shown.Value < HiddenBelow)
         {
             _top.Snap(top);
             _bottom.Snap(bottom);
-            _edge.Snap(edge);
             _squish.Value = AppearSquish;
             return;
         }
@@ -117,7 +97,6 @@ public sealed class RowList : StackPanel
         }
         _top.Target = top;
         _bottom.Target = bottom;
-        _edge.Target = edge;
     }
 
     void Reset()
@@ -125,7 +104,6 @@ public sealed class RowList : StackPanel
         _lit = _pressed = false;
         _shown.Snap(0);
         _squish.Snap(0);
-        _edge.Snap(0);
         ApplyHighlight();
     }
 
@@ -135,7 +113,6 @@ public sealed class RowList : StackPanel
         moving |= _bottom.Advance(dt);
         moving |= _shown.Advance(dt);
         moving |= _squish.Advance(dt);
-        moving |= _edge.Advance(dt);
         ApplyHighlight();
         return moving;
     }
@@ -146,25 +123,8 @@ public sealed class RowList : StackPanel
         _rect = new Rect(x, _top.Value + y,
             Math.Max(ActualWidth - x * 2, 0), Math.Max(_bottom.Value - _top.Value - y * 2, 0));
         _fill.Opacity = Math.Clamp(_shown.Value, 0, 1)
-            * (HoverOpacity + (PressOpacity - HoverOpacity) * Math.Clamp(_squish.Value, 0, 1))
-            * (1 - (1 - EdgeOpacity) * Math.Abs(Math.Clamp(_edge.Value, -1, 1)));
+            * (HoverOpacity + (PressOpacity - HoverOpacity) * Math.Clamp(_squish.Value, 0, 1));
         InvalidateVisual();
-    }
-
-    static Geometry EdgeOutline(Rect rect, double edge)
-    {
-        bool bottom = edge < 0;
-        double blend = Math.Abs(edge);
-        double radius = (bottom ? BottomRadius : TopRadius) * blend;
-        double inner = Radius + (InnerRadius - Radius) * blend;
-        var row = new RectangleGeometry(rect, inner, inner);
-
-        // Extend the squircle toward the panel's interior to preserve its curve in a short row.
-        double height = Math.Max(rect.Height, radius * 4);
-        var frame = new Rect(rect.X, bottom ? rect.Bottom - height : rect.Y, rect.Width, height);
-        Geometry outline = Geometry.Combine(row, Squircle.Of(frame, radius), GeometryCombineMode.Intersect, null);
-        outline.Freeze();
-        return outline;
     }
 
     static Brush CreateRimBrush()

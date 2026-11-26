@@ -522,7 +522,6 @@ public partial class MainWindow : Window
         View previous = _view;
         PillShape from = ShapeOf(previous);
         _view = target;
-        if (target == View.Menu) { _menuTimerPresetsOpen = false; ApplyMenuTimerPresets(0); }
         if (target == View.MediaBig) UpdatePlayerLyrics(true);
         else ShowLyricsPlaceholder(false);
 
@@ -591,7 +590,6 @@ public partial class MainWindow : Window
         View.Place => PillShapes[view] with { Height = PlaceView.Height },
         View.Look => PillShapes[view] with { Height = LookView.Height },
         View.Discord => PillShapes[view] with { Height = DiscordPage.Height },
-        View.Menu when _menuTimerPresetsOpen => PillShapes[view] with { Height = PillShapes[view].Height + MenuTimerPresets.Height },
         _ => PillShapes[view],
     };
 

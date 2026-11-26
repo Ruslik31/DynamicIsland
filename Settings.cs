@@ -89,7 +89,6 @@ static class Settings
     static bool _discordDm = ReadSwitch(nameof(DiscordDm)), _discordMention = ReadSwitch(nameof(DiscordMention));
     static bool _discordEveryone = ReadSwitch(nameof(DiscordEveryone), false), _discordPreview = ReadSwitch(nameof(DiscordPreview));
     static bool _discordQuietFocused = ReadSwitch(nameof(DiscordQuietFocused)), _discordLink = ReadSwitch(nameof(DiscordLink));
-    static bool _showMenuButton = ReadSwitch(nameof(ShowMenuButton));
     static int _discordAvatars = Math.Clamp(Read(nameof(DiscordAvatars), 1), 0, MaxAvatarChoice);
     static int _discordMessageTime = Math.Clamp(Read(nameof(DiscordMessageTime), 1), 0, MaxMessageSecondsChoice);
 
@@ -231,13 +230,6 @@ static class Settings
     {
         get => _discordLink;
         set => Write(nameof(DiscordLink), _discordLink = value);
-    }
-
-    /// <summary>Кнопки «⋯» рядом с плеером и часами: открывают то же меню, что и правая кнопка мыши.</summary>
-    public static bool ShowMenuButton
-    {
-        get => _showMenuButton;
-        set => Write(nameof(ShowMenuButton), _showMenuButton = value);
     }
 
     /// <summary>Номер варианта «сколько аватарок в свёрнутом острове».</summary>

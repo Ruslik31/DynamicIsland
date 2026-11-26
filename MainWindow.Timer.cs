@@ -28,7 +28,6 @@ public partial class MainWindow
     bool _bubbleHovered, _bubblePressed, _bubbleDragging, _bubbleDropArmed, _bubbleDropToNormal, _bubbleDropToCompact;
     double _bubbleDownX, _bubbleDownY;
     Panel _bubbleDownPanel;
-    bool _menuTimerPresetsOpen;
 
     void ApplyTimerTint()
     {
@@ -174,41 +173,7 @@ public partial class MainWindow
         }
     }
 
-    void TimerRow_Click(object sender, RoutedEventArgs e)
-    {
-        if (_countdown.IsActive)
-        {
-            ShowPanel(Panel.Timer);
-            return;
-        }
-        _menuTimerPresetsOpen = !_menuTimerPresetsOpen;
-        _height.Tune(250, 24);
-        UpdateTargets();
-    }
-
-    void ApplyMenuTimerPresets(double revealed)
-    {
-        MenuTimerPresetClip.IsHitTestVisible = _menuTimerPresetsOpen;
-        if (MenuTimerPresetClip.Height == revealed) return;
-
-        double progress = revealed / MenuTimerPresets.Height;
-        MenuTimerPresetClip.Height = revealed;
-        MenuTimerPresetClip.Visibility = revealed > 0 ? Visibility.Visible : Visibility.Collapsed;
-        MenuTimerPresets.Opacity = progress;
-        ((RotateTransform)MenuTimerChevron.RenderTransform).Angle = 90 * progress;
-        MenuView.Height = PillShapes[View.Menu].Height + revealed;
-    }
-
-    void MenuTimerPreset_Click(object sender, RoutedEventArgs e)
-    {
-        if (_countdown.IsActive) return;
-        SetMinutes(TimerPresetMinutes(sender));
-        _menuTimerPresetsOpen = false;
-        StartTimer(TimeSpan.FromMinutes(_setupMinutes));
-    }
-
-    void MenuTimerCustom_Click(object sender, RoutedEventArgs e) =>
-        ShowPanel(_countdown.IsActive ? Panel.Timer : Panel.TimerSet);
+    void TimerRow_Click(object sender, RoutedEventArgs e) => ShowPanel(_countdown.IsActive ? Panel.Timer : Panel.TimerSet);
 
     void TimerLess_Click(object sender, RoutedEventArgs e) => SetMinutes(_setupMinutes - 1);
 

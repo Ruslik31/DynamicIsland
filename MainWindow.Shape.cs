@@ -299,7 +299,6 @@ public partial class MainWindow
         CompactGlow.Height = Math.Min(h, 34);
         CompactGlow.Margin = new Thickness(0, h - CompactGlow.Height, 0, 0);
 
-        if (_view == View.Menu && (_menuTimerPresetsOpen || MenuTimerPresetClip.Height > 0)) ApplyMenuTimerPresets(Math.Clamp(h - PillShapes[View.Menu].Height, 0, MenuTimerPresets.Height));
         FitMediaViews(w, h);
         if (_morphing) FitViews(w, h);
         ApplyMotionBlur();
