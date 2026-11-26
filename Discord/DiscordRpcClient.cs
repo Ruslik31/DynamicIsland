@@ -28,6 +28,7 @@ public sealed class DiscordRpcClient : IDisposable
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly Dictionary<string, TaskCompletionSource<JsonElement>> _pendingRequests = [];
     private readonly Dictionary<string, string> _guildNames = [];
+    private readonly Dictionary<string, string> _guildIcons = [];
     private readonly Dictionary<string, VoiceMember> _channelMembers = [];
     private readonly HashSet<string> _speakingUsers = [];
 
@@ -639,7 +640,16 @@ public sealed class DiscordRpcClient : IDisposable
             _guildNames[guildId] = gName;
             _currentGuildName = gName;
         }
+        if (resp is { } rr && rr.TryGetProperty("data", out var iconData)
+            && iconData.TryGetProperty("icon_url", out var iconElem) && iconElem.ValueKind == JsonValueKind.String)
+        {
+            _guildIcons[guildId] = iconElem.GetString() ?? "";
+        }
     }
+
+    /// <summary>URL иконки сервера (CDN Discord), если гильдия уже запрашивалась и иконка у неё есть.</summary>
+    public string? GuildIconUrl(string? guildId) =>
+        !string.IsNullOrEmpty(guildId) && _guildIcons.TryGetValue(guildId, out string? url) && url.Length > 0 ? url : null;
 
     private async Task SubscribeChannelEventsAsync(string channelId)
     {

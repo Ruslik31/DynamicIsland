@@ -988,7 +988,7 @@
                     </StackPanel>
                 </Grid>
 
-                <Grid x:Name="DiscordPage" Width="300" Height="340" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Grid x:Name="DiscordPage" Width="300" Height="430" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <local:RowList Margin="10,8,10,0">
                         <Button Style="{StaticResource BackButton}" Content="DISCORD" Click="DiscordBack_Click"/>
                         <Button Style="{StaticResource RowButton}" Click="DiscordEnabled_Click">
@@ -1033,6 +1033,21 @@
                                 <local:Icon Style="{StaticResource RowIcon}" Kind="Bell"/>
                                 <TextBlock Style="{StaticResource RowLabel}" Text="Сообщать о подключении"/>
                                 <local:Toggle x:Name="DiscordLinkSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="RpcMusic_Click">
+                            <Grid>
+                                <local:Icon Style="{StaticResource RowIcon}" Kind="Bars"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Музыка в статусе Discord"/>
+                                <local:Toggle x:Name="RpcMusicSwitch" Style="{StaticResource RowSwitch}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource RowButton}" Click="RpcVoice_Click">
+                            <Grid>
+                                <local:VoiceIcon Kind="Headset" Width="17" Height="17" Fill="{StaticResource Dim}"
+                                                 HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource RowLabel}" Text="Звонок в статусе Discord"/>
+                                <local:Toggle x:Name="RpcVoiceSwitch" Style="{StaticResource RowSwitch}"/>
                             </Grid>
                         </Button>
                     </local:RowList>

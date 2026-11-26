@@ -115,6 +115,7 @@ static class Settings
     static int _accent = Read(nameof(Accent), 0);
     static int _collapseDelayChoice = Math.Clamp(Read(nameof(CollapseDelayChoice), 0), 0, MaxCollapseDelayChoice);
     static bool _compactMusicAnimation = ReadSwitch(nameof(CompactMusicAnimation), false);
+    static bool _rpcMusic = ReadSwitch(nameof(RpcMusic), true), _rpcVoice = ReadSwitch(nameof(RpcVoice), true);
 
     /// <summary>Интеграция с Discord: по умолчанию включена.</summary>
     public static bool DiscordEnabled
@@ -264,6 +265,20 @@ static class Settings
     {
         get => _compactMusicAnimation;
         set => Write(nameof(CompactMusicAnimation), _compactMusicAnimation = value);
+    }
+
+    /// <summary>Карточка Rich Presence с текущим треком в профиле Discord.</summary>
+    public static bool RpcMusic
+    {
+        get => _rpcMusic;
+        set => Write(nameof(RpcMusic), _rpcMusic = value);
+    }
+
+    /// <summary>Карточка Rich Presence с голосовым каналом в профиле Discord.</summary>
+    public static bool RpcVoice
+    {
+        get => _rpcVoice;
+        set => Write(nameof(RpcVoice), _rpcVoice = value);
     }
 
     public static bool Dots

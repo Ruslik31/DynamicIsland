@@ -102,6 +102,7 @@ public partial class MainWindow : Window
     readonly AudioService _audio = new();
     readonly MediaService _media;
     readonly DiscordService _discord;
+    readonly Discord.PresenceService _presence;
     readonly LyricsService _lyrics = new();
     readonly NetworkService _network;
     readonly Updater _updater = new();
@@ -210,6 +211,7 @@ public partial class MainWindow : Window
         _media.Changed += OnMediaChanged;
         _discord = new DiscordService(Dispatcher);
         PrepareDiscord();
+        _presence = new Discord.PresenceService(_media, _discord);
         _lyrics.Changed += OnLyricsChanged;
         _network = new NetworkService(Dispatcher);
         _network.Changed += OnNetworkChanged;
@@ -348,6 +350,7 @@ public partial class MainWindow : Window
         catch (Exception ex) { App.Log(ex); }
         _obs.Start();
         StartDiscord();
+        _presence.Start();
         StartUpdateChecks();
     }
 
@@ -413,6 +416,7 @@ public partial class MainWindow : Window
         _updateCheckTimer.Stop();
         _alarm.Stop();
         _discord.Dispose();
+        _presence.Dispose();
         _pointerLyric?.ShowLine("", 0, 0);
         _glass.Hide();
         var fade = new DoubleAnimation(0, Ms(220));

@@ -191,6 +191,9 @@ sealed class DiscordService : IDisposable
         if (_bridge.IsConnected) _bridge.RequestSnapshot();
     }
 
+    /// <summary>URL иконки сервера для карточки Rich Presence (только нативный RPC знает её).</summary>
+    public string? GuildIconUrl(string? guildId) => _rpc.GuildIconUrl(guildId);
+
     void Post(Action action) => _dispatcher.BeginInvoke(() =>
     {
         try { action(); }
