@@ -67,7 +67,13 @@ public partial class MainWindow
     {
         SyncDiscordTexts();
         if (!Settings.DiscordLink) return;
-        if (_discord.Linked)
+        bool linked = _discord.Linked;
+        // Без Discord канал дёргается при каждой попытке переподключения:
+        // уведомляем только когда состояние действительно поменялось.
+        if (linked == _linkNotified) return;
+        if (_linkNotified == null && !linked) { _linkNotified = false; return; }
+        _linkNotified = linked;
+        if (linked)
         {
             string mode = _discord.IsRpcConnected && _discord.IsBridgeConnected
                 ? "Нативно + плагин"
@@ -78,6 +84,8 @@ public partial class MainWindow
         }
         else Notify(Glyph.Cross, _dim, "Discord", "Discord отключился");
     }
+
+    bool? _linkNotified;
 
     void SyncDiscordTexts()
     {

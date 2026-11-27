@@ -82,39 +82,39 @@ static class Settings
     static int _position = Math.Clamp(Read(nameof(Position), 0), -MaxPosition, MaxPosition);
     static bool _discordEnabled = ReadSwitch(nameof(DiscordEnabled), true);
     static bool _discordMusicBubble = ReadSwitch(nameof(DiscordMusicBubble)), _discordMusicMini = ReadSwitch(nameof(DiscordMusicMini), false);
-    static int _discordMusicState = Math.Clamp(Read(nameof(DiscordMusicState), _discordMusicMini ? (int)DiscordMusicState.Mini : (int)DiscordMusicState.Compact), 0, 2);
+    static int _discordMusicState = Math.Clamp(Read(nameof(DiscordMusicState), (int)DiscordMusicState.Normal), 0, 2);
     static bool _music = ReadSwitch(nameof(Music));
     static bool _discordVoice = ReadSwitch(nameof(DiscordVoice)), _discordSpeaking = ReadSwitch(nameof(DiscordSpeaking));
-    static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), false), _discordInGames = ReadSwitch(nameof(DiscordInGames));
+    static bool _discordMoves = ReadSwitch(nameof(DiscordMoves), true), _discordInGames = ReadSwitch(nameof(DiscordInGames));
     static bool _discordDm = ReadSwitch(nameof(DiscordDm)), _discordMention = ReadSwitch(nameof(DiscordMention));
     static bool _discordEveryone = ReadSwitch(nameof(DiscordEveryone), false), _discordPreview = ReadSwitch(nameof(DiscordPreview));
     static bool _discordQuietFocused = ReadSwitch(nameof(DiscordQuietFocused)), _discordLink = ReadSwitch(nameof(DiscordLink));
-    static int _discordAvatars = Math.Clamp(Read(nameof(DiscordAvatars), 1), 0, MaxAvatarChoice);
+    static int _discordAvatars = Math.Clamp(Read(nameof(DiscordAvatars), 3), 0, MaxAvatarChoice);
     static int _discordMessageTime = Math.Clamp(Read(nameof(DiscordMessageTime), 1), 0, MaxMessageSecondsChoice);
 
     static bool _lyrics = ReadSwitch(nameof(Lyrics)), _lyricEffects = ReadSwitch(nameof(LyricEffects));
-    static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen));
+    static bool _network = ReadSwitch(nameof(Network)), _hideFullscreen = ReadSwitch(nameof(HideFullscreen), false);
     static bool _rim = ReadSwitch(nameof(Rim)), _appVolume = ReadSwitch(nameof(AppVolume));
     static bool _weather = ReadSwitch(nameof(Weather));
     static bool _pointerLyric = ReadSwitch(nameof(PointerLyric), false);
     static bool _lyricParting = ReadSwitch(nameof(LyricParting));
     static PointerLyricShape _pointerLyricShape = (PointerLyricShape)Math.Clamp(Read(nameof(PointerLyricShape), 0), 0, (int)PointerLyricShape.Line);
     static Place? _place = ReadPlace();
-    static bool _dots = ReadSwitch(nameof(Dots), false);
+    static bool _dots = ReadSwitch(nameof(Dots), true);
     static bool _lineBar = ReadSwitch(nameof(LineBar));
     static bool _seekGlow = ReadSwitch(nameof(SeekGlow));
-    static bool _glass = ReadSwitch(nameof(Glass), false);
+    static bool _glass = ReadSwitch(nameof(Glass), true);
     static Backdrop _backdrop = (Backdrop)Math.Clamp(Read(nameof(Backdrop), 0), 0, (int)Backdrop.Cover);
     static LyricChange _lyricChange = (LyricChange)Math.Clamp(Read(nameof(LyricChange), (int)LyricChange.Wave), 0, (int)LyricChange.Drum);
-    static LyricSource _lyricSources = Known((LyricSource)Read(nameof(LyricSources), (int)LyricSource.Usual));
-    static Hover _hover = (Hover)Math.Clamp(Read(nameof(Hover), 0), 0, (int)Hover.Flow);
-    static SeekHover _seekHover = (SeekHover)Math.Clamp(Read(nameof(SeekHover), 0), 0, (int)SeekHover.Wave);
+    static LyricSource _lyricSources = Known((LyricSource)Read(nameof(LyricSources), (int)LyricSource.All));
+    static Hover _hover = (Hover)Math.Clamp(Read(nameof(Hover), (int)Hover.Magnet), 0, (int)Hover.Flow);
+    static SeekHover _seekHover = (SeekHover)Math.Clamp(Read(nameof(SeekHover), (int)SeekHover.Wave), 0, (int)SeekHover.Wave);
     static CompactProgress _compactProgress = (CompactProgress)Math.Clamp(Read(nameof(CompactProgress), (int)CompactProgress.Ring), 0, (int)CompactProgress.Wash);
     static int _scale = Math.Clamp(Read(nameof(Scale), DefaultScale), MinScale, MaxScale);
     static int _gap = Math.Clamp(Read(nameof(Gap), DefaultGap), 0, MaxGap);
     static int _accent = Read(nameof(Accent), 0);
-    static int _collapseDelayChoice = Math.Clamp(Read(nameof(CollapseDelayChoice), 0), 0, MaxCollapseDelayChoice);
-    static bool _compactMusicAnimation = ReadSwitch(nameof(CompactMusicAnimation), false);
+    static int _collapseDelayChoice = Math.Clamp(Read(nameof(CollapseDelayChoice), 1), 0, MaxCollapseDelayChoice);
+    static bool _compactMusicAnimation = ReadSwitch(nameof(CompactMusicAnimation), true);
 
     /// <summary>Интеграция с Discord: по умолчанию включена.</summary>
     public static bool DiscordEnabled
