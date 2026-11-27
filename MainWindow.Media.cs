@@ -143,6 +143,8 @@ public partial class MainWindow
         {
             View.Media or View.Toast or View.MediaBig when _media.HasTrack && (_cover != null || Settings.Accent != null)
                 => Settings.Accent is { } own ? CoverPalette.Around(own) : _media.Palette,
+            View.Voice or View.VoiceBig when _musicBubbleWanted && _media.HasTrack && (_cover != null || Settings.Accent != null)
+                => Settings.Accent is { } own ? CoverPalette.Around(own) : _media.Palette,
             View.Timer or View.TimerBig or View.TimerSet => [_timerTint.Color],
             View.Record or View.RecordBig => [_recordTint.Color],
             View.Weather or View.Place when _weather.Now is { } report => [WeatherColor(report.Sky, report.Night)],
@@ -199,6 +201,7 @@ public partial class MainWindow
         PlayerMatrix.Tint(palette, time);
         PlayerLyricWait.Tint(palette, time);
         foreach (RadioButton tile in BackdropStrip.Children) ((BackdropPreview)tile.Content).Tint(palette);
+        SyncRim();
     }
 
     void SyncBackdrop()

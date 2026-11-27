@@ -51,6 +51,7 @@ public partial class MainWindow
     bool _morphing, _growing;
     double _growBubbleX;
     Rect _pillRect = Rect.Empty, _bubbleRect = Rect.Empty, _growFrom = Rect.Empty;
+    (int L, int T, int R, int B, int Rad)[] _region = [];
     readonly Spring _bubbleGrow = new(0, 300, 24), _islandShift = new(0, 300, 24), _normalTransition = new(Settings.DiscordMusicState == DiscordMusicState.Normal ? 1 : 0, 240, 24), _bottomMusicScale = new(1, 320, 20), _bottomMusicWidth = new(CompactMediaWidth, 280, 28);
     bool _bottomMusicHovered, _bottomMusicPressed, _bottomMusicDragging, _bottomMusicDropToCompact;
     double _bottomMusicDownX, _bottomMusicDownY;
@@ -331,6 +332,38 @@ public partial class MainWindow
             Shadow.Clip = _glass.IsOn ? Around(Shadow.Data) : null;
         }
         CutGlass(dpi);
+        UpdateWindowRegion(dpi);
+    }
+
+    const int RegionMarginDip = 2;
+
+    void RegionPiece(FrameworkElement el, double radius, List<(int L, int T, int R, int B, int Rad)> pieces, double dpi)
+    {
+        if (el.RenderSize.Width < 1 || el.RenderSize.Height < 1) return;
+        Rect at = el.TransformToAncestor(this).TransformBounds(new Rect(el.RenderSize));
+        if (at.IsEmpty) return;
+        double scaleX = at.Width / el.RenderSize.Width;
+        int margin = (int)Math.Round(RegionMarginDip * dpi);
+        pieces.Add((
+            (int)Math.Floor(at.Left * dpi) - margin,
+            (int)Math.Floor(at.Top * dpi) - margin,
+            (int)Math.Ceiling(at.Right * dpi) + margin,
+            (int)Math.Ceiling(at.Bottom * dpi) + margin,
+            (int)Math.Round(radius * scaleX * dpi) + margin));
+    }
+
+    void UpdateWindowRegion(double dpi)
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        var pieces = new List<(int L, int T, int R, int B, int Rad)>(4);
+        RegionPiece(Pill, Pill.CornerRadius.TopLeft, pieces, dpi);
+        if (Bubble.IsVisible) RegionPiece(Bubble, Bubble.RenderSize.Height / 2, pieces, dpi);
+        if (BottomMusic.IsVisible) RegionPiece(BottomMusic, BottomMusic.RenderSize.Height / 2, pieces, dpi);
+        if (PullHandle.IsVisible) RegionPiece(PullHandle, PullHandle.RenderSize.Height / 2, pieces, dpi);
+        var next = pieces.ToArray();
+        if (next.AsSpan().SequenceEqual(_region)) return;
+        _region = next;
+        Native.SetShapeRegion(_hwnd, next);
     }
 
     void PlaceGestureHints(Rect pill)

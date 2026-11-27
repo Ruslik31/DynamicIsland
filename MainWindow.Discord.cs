@@ -495,8 +495,6 @@ public partial class MainWindow
     {
         DiscordEnabledSwitch.Set(Settings.DiscordEnabled, animate);
         DiscordLinkSwitch.Set(Settings.DiscordLink, animate);
-        RpcMusicSwitch.Set(Settings.RpcMusic, animate);
-        RpcVoiceSwitch.Set(Settings.RpcVoice, animate);
         DiscordVoiceSwitch.Set(Settings.DiscordVoice, animate);
         DiscordSpeakingSwitch.Set(Settings.DiscordSpeaking, animate);
         DiscordMovesSwitch.Set(Settings.DiscordMoves, animate);
@@ -515,20 +513,6 @@ public partial class MainWindow
     {
         Settings.DiscordLink = !Settings.DiscordLink;
         UpdateSwitches(true);
-    }
-
-    void RpcMusic_Click(object sender, RoutedEventArgs e)
-    {
-        Settings.RpcMusic = !Settings.RpcMusic;
-        UpdateSwitches(true);
-        _presence.Refresh();
-    }
-
-    void RpcVoice_Click(object sender, RoutedEventArgs e)
-    {
-        Settings.RpcVoice = !Settings.RpcVoice;
-        UpdateSwitches(true);
-        _presence.Refresh();
     }
 
     void DiscordVoice_Click(object sender, RoutedEventArgs e)

@@ -82,6 +82,12 @@ static class Native
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern IntPtr GetDesktopWindow();
     [DllImport("user32.dll")] static extern IntPtr GetShellWindow();
+    [DllImport("gdi32.dll")] static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse, int heightEllipse);
+    [DllImport("gdi32.dll")] static extern int CombineRgn(IntPtr dest, IntPtr src1, IntPtr src2, int mode);
+    [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr obj);
+    [DllImport("user32.dll")] static extern int SetWindowRgn(IntPtr hwnd, IntPtr region, bool redraw);
+    const int RGN_OR = 2;
     [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT point);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
     [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
@@ -190,6 +196,28 @@ static class Native
 
     public static void KeepOnTop(IntPtr hwnd) =>
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+
+    /// <summary>Обрезает окно по набору скруглённых прямоугольников (в пикселях окна): клики вне них проходят сквозь окно.</summary>
+    public static void SetShapeRegion(IntPtr hwnd, (int L, int T, int R, int B, int Rad)[] pieces)
+    {
+        IntPtr region = IntPtr.Zero;
+        foreach ((int l, int t, int r, int b, int rad) in pieces)
+        {
+            IntPtr part = CreateRoundRectRgn(l, t, r + 1, b + 1, rad * 2, rad * 2);
+            if (region == IntPtr.Zero)
+            {
+                region = part;
+                continue;
+            }
+            IntPtr merged = CreateRectRgn(0, 0, 0, 0);
+            CombineRgn(merged, region, part, RGN_OR);
+            DeleteObject(region);
+            DeleteObject(part);
+            region = merged;
+        }
+        if (region == IntPtr.Zero) region = CreateRectRgn(0, 0, 0, 0);
+        SetWindowRgn(hwnd, region, true); // регионом дальше владеет система
+    }
 
     public static bool IsForegroundFullscreen(IntPtr self)
     {
